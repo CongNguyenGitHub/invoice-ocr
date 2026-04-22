@@ -1,0 +1,25 @@
+﻿Phase-1 audit records    : 1585
+Phase-2 newly dirty (raw): 13
+
+=== Final grade distribution (out of 1585 original invoices) ===
+  Γ£à GOLDEN (usable for A/B test)                    : 1420  (89.6%)
+  ΓÜá∩╕Å  INCOMPLETE (missing critical GT fields)       :  121  (7.6%)
+  Γ¥î DIRTY (OCR hard error: ###, ???, etc.)          :   31  (2.0%)
+  Γ¥î DIRTY_DEEP (char substitution: ?, digit-mid-alpha):   13  (0.8%)
+
+Total excluded: 165  (10.4%)
+Golden set    : 1420  (89.6%)
+
+=== Per-type golden count ===
+Type           Total   Golden  Incompl    Dirty  Golden%
+  aeon             233      165       56       12    70.8%
+  bhx_2024         199      197        0        2    99.0%
+  bigc             234      202       27        5    86.3%
+  coopmart         228      206       14        8    90.4%
+  coopxtra           7        5        0        2    71.4%
+  emart            222      201        9       12    90.5%
+  lotte            222      209       12        1    94.1%
+  satra            240      235        3        2    97.9%
+
+[SAVED] golden_clean.json -> C:\Users\NguyenNguyen\Downloads\invoice-ocr\data\ab_test\golden_clean.json  (1420 records)
+[SAVED] final_audit.jsonl -> C:\Users\NguyenNguyen\Downloads\invoice-ocr\data\ab_test\final_audit.jsonl

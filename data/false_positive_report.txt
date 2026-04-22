@@ -1,0 +1,65 @@
+﻿mid_asterisk records: 139
+
+All unique * patterns found (243 total):
+
+Category breakdown:
+  multiplier/quantity (legit format): 239
+  other: 4
+
+Examples ΓÇö letter*letter (substitution, true errors):
+
+Examples ΓÇö multiplier (legit, should NOT be excluded):
+  [aeon] SUA VINAMILK 100% IT ─É╞»ß╗£NG 110ML*4
+  [aeon] B├üNH BAD NHAN COM 45G*60 AN FHO C30
+  [aeon] Sß╗«A OVALTINE CACAO L├ÜA Mß║áCH CANXI 180ML*
+  [aeon] Sß╗«A CHUA AN BA VI VI NHA DAM 100G*4 Hß╗ÿP
+  [bigc] XXTT CP GOLD 40G*5
+  [bigc] TRA COZY GUNG 20*10G
+  [bigc] XXTT CP GOLD 40G*5
+  [bigc] TH6 SUA MILO 180ML*8
+  [bigc] SUA MILO 110ML*4
+  [bigc] NTL RED BULL 250ML*6
+
+
+random_uppercase records: 8
+Cashier name examples:
+  [satra] cashier='P T ThNguy├¬n'
+  [satra] cashier='N.T.Mß╗ÖngDung'
+  [satra] cashier='V╞░╞íngPhucLoc'
+  [satra] cashier='VuongPhucLß╗îc'
+  [satra] cashier='N. Tuyß║┐tNhung'
+  [satra] cashier='N. Tuyß║┐tNhung'
+  [bhx_2024] cashier=''
+  [bhx_2024] cashier=''
+
+
+digit_mid_alpha records: 4
+Product name examples:
+  [coopmart] BIA HEINEKEN SILVER LOC6X330
+  [coopmart] S-N.U SUANUTRIDAU-LMACH6X29
+  [coopmart] CAPHE HTVINA3IN1GOLDBICH24X.
+  [coopmart] K.CHI CAF CATLATO. KIM'SHOP5C
+  [coopmart] CA TRICH E.TRUNGKG-AKURUHI9S
+  [lotte] CL-NUOC RUA CHENHARUT.XANH4K
+  [lotte] NAP CHE LO CAM DIEN OPC O1M
+
+
+mid_at_sign records: 2
+  [coopxtra] @HANG DO DUNG-LKTE 990
+  [coopxtra] @HANG DO DUNG-LKTE 990-VAT8
+  [coopmart] @WASABI-AKURUHI990
+
+
+mid_question_mark records: 11
+  [aeon] TA?O HO?NG (QUEEN) NEW
+  [coopxtra] GS COUPSELECT 21OP?CX5-HOAL
+  [emart] BBL C├ü B?NG BANG MOCHI SCL ─É?U ─É? 145
+  [emart] BBL CA BANG BANG MOCHI SCL ─É?U ─É? 145
+  [emart] +RONG BI?N BIBIGO CJ TRUYZN THING 4G*
+  [emart] BBL CA B?NG BANG MOCHI SCL D?U ─É? 145
+  [aeon] NHO XANH KHONG HA?T U?C
+  [aeon] THß║áCH Dß╗«A ANH Hß╗ôNG TU?I 900G
+  [aeon] N╞░╞í?C UO?NG TRA? XANH OICHA GREEN TEA 1L
+  [aeon] TRA Gß╗½NG HONG PHAT HO?A TAN 20X10G
+  [aeon] TPBS KETO VITAMIN C&D VI? BA?O PORORO 12
+  [aeon] TPBS KE?O VITAMIN C VI? BA?O PORORO 12G

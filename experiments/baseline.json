@@ -1,0 +1,55 @@
+{
+  "_doc": "Accuracy baseline for the CI gate. Edit only via PR; bump on each release tag. The reference numbers below were captured on the v3.7 prompt against the dev set (run_3_v3.7.json, 941 records). Test-set numbers will likely settle 1-3pp away from these; the floors are deliberately set ~3pp below dev so first real test run has room to breathe. After the first full nightly green-test run, the team should re-run check_accuracy.py --bump-baseline to switch to true test-set numbers.",
+  "psv": "v3.7",
+  "committed_at": "2026-04-22",
+  "reference_run": "experiments/runs/run_3_v3.7.json",
+
+  "overall_pct_floor": 87.0,
+  "overall_pct_relative_drop_max": 1.5,
+
+  "field_floors": {
+    "type":                100.0,
+    "time":                 95.0,
+    "barcode":              92.0,
+    "product_total_money":  98.5,
+    "product_unit_price":   97.0,
+    "product_quantity":     94.0,
+    "product_id":           90.0,
+    "product_name":         87.0,
+    "pos_id":               80.0,
+    "cashier":              75.0,
+    "receipt_number":       77.0,
+    "date":                 75.0,
+    "total_money":          77.0,
+    "name":                 70.0
+  },
+
+  "field_relative_drop_max": {
+    "default":              1.5,
+    "product_total_money":  0.5,
+    "product_unit_price":   0.5,
+    "type":                 0.0,
+    "total_money":          1.0,
+    "product_quantity":     1.0
+  },
+
+  "by_store_floors": {
+    "_doc": "Per-store overall floor (avg pct across the seven main fields: name/date/total_money/receipt_number/pos_id/cashier/product_name). Stores with n < 10 are excluded. Floors set ~3pp below observed v3.7 dev numbers so first real test-set run has breathing room.",
+    "exclude_types_below_n": 10,
+    "store_overall_floor": {
+      "aeon":     90.0,
+      "bhx_2024": 65.0,
+      "bigc":     89.0,
+      "coopmart": 88.0,
+      "emart":    63.0,
+      "lotte":    73.0,
+      "satra":    84.0
+    }
+  },
+
+  "ci_modes": {
+    "_doc": "Tolerance scaling. Smoke = stack-gate.yml on PRs (smaller sample, more noise). Strict = full-eval.yml on nightly+release (full 400 records).",
+    "smoke":  {"floor_offset_pp": -2.0, "drop_multiplier": 1.5},
+    "strict": {"floor_offset_pp":  0.0, "drop_multiplier": 1.0}
+  }
+}

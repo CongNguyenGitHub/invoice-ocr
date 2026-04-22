@@ -1,0 +1,16 @@
+﻿bhx_2024 count: 199
+
+--- Sample bhx products ---
+  receipt=OV114551504007634
+    code=''  name='BIA HEINEKEN SILVER LON 250ML TH24'
+  receipt=OV127921504233600
+    code=''  name='BIA TIGER Bß║áC LON 330ML TH24'
+  receipt=OV109279504191093
+    code=''  name='BIA HEINEKEN SILVER LON 330ML TH24'
+
+--- bhx digit_alpha pattern hits (first 15) ---
+
+--- bhx with lone_amp ---
+
+--- bhx product_code pattern distribution ---
+  <empty>: 411

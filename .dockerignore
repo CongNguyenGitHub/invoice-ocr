@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.vscode/
+data/
+scripts/
+yolo-v1-pytorch-default-v1/
+label_minitet_festive_24_v3_public.json
+evaluation_report.json
+*.img
+temp_api_test_rush/
+
+temp_api_test_rush/
+temp_api_test_rush/

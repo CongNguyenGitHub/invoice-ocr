@@ -1,0 +1,63 @@
+# Fast checks — lint, type, unit + integration tests.
+#
+# Runs on EVERY PR and every push to main. Must complete in < 3 minutes so
+# developers get fast feedback. No Docker, no Gemini, no network-bound work
+# other than PyPI for pip install.
+#
+# This is the only gate that runs unconditionally — downstream workflows
+# (stack-gate, full-eval) are gated on paths / events to control cost.
+name: Fast checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: fast-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install package + dev deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Ruff lint
+        run: ruff check src tests scripts
+
+      - name: Ruff format (check only)
+        run: ruff format --check src tests scripts
+        continue-on-error: true    # formatter drift shouldn't block a prompt tweak
+
+      - name: Mypy
+        run: mypy src --ignore-missing-imports --no-strict-optional
+        continue-on-error: true    # surface warnings without blocking
+
+      - name: Pytest (unit + integration)
+        run: |
+          mkdir -p reports
+          pytest tests/unit tests/integration -v \
+            --junit-xml=reports/junit.xml
+
+      - name: Upload JUnit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-fast-checks
+          path: reports/junit.xml
+          retention-days: 14

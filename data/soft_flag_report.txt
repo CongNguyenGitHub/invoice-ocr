@@ -1,0 +1,22 @@
+﻿--- missing_date_and_receipt: 82 records ---
+  idx=5 type=aeon  date=''  receipt=''  total=''  n_products=16
+  idx=10 type=aeon  date=''  receipt=''  total='749842'  n_products=8
+  idx=13 type=aeon  date=''  receipt=''  total=''  n_products=15
+
+--- missing_total_money: 81 records ---
+  idx=5 type=aeon  date=''  receipt=''  total=''  n_products=16
+  idx=13 type=aeon  date=''  receipt=''  total=''  n_products=15
+  idx=20 type=aeon  date=''  receipt=''  total=''  n_products=22
+
+--- empty_product_name: 7 records ---
+  idx=337 type=bigc  date=''  receipt=''  total=''  n_products=30
+  idx=821 type=emart  date='01/09/2024'  receipt='0005-0064'  total='1340800'  n_products=15
+  idx=1326 type=aeon  date=''  receipt=''  total=''  n_products=28
+
+--- lone_amp: 38 records ---
+  idx=28 type=aeon  date=''  receipt=''  total='1645592'  n_products=15
+  idx=54 type=aeon  date=''  receipt=''  total=''  n_products=15
+  idx=55 type=aeon  date=''  receipt=''  total=''  n_products=22
+
+Records with BOTH missing_date_and_receipt AND missing_total_money: 44
+Records with ONLY missing_total_money (date/receipt is present): 37

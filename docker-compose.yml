@@ -1,0 +1,139 @@
+services:
+  # ───────────────── Init (alembic + buckets + lifecycles) ─────────────────
+  init:
+    build: .
+    env_file: .env
+    environment:
+      POSTGRES_DSN: postgresql+asyncpg://invoice:invoice@postgres:5432/invoice_ocr
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: ["python", "-m", "src.init.entrypoint"]
+
+  # ───────────────── API ─────────────────
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+      - "9101:9101"
+    env_file: .env
+    environment:
+      POSTGRES_DSN: postgresql+asyncpg://invoice:invoice@postgres:5432/invoice_ocr
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      API_METRICS_PORT: "9101"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    command: ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  # ───────────────── Worker (4 replicas × 4 async tasks) ─────────────────
+  worker:
+    build: .
+    deploy:
+      replicas: 4
+    env_file: .env
+    environment:
+      POSTGRES_DSN: postgresql+asyncpg://invoice:invoice@postgres:5432/invoice_ocr
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      TRITON_HOST: triton:8001
+      WORKER_METRICS_PORT: "9102"
+      WORKER_CONCURRENCY: "4"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      triton:
+        condition: service_started
+    volumes:
+      - ./whitelists:/app/whitelists:ro
+      - ./src/pipeline/prompts:/app/src/pipeline/prompts:ro
+    command: ["python", "-m", "src.worker.main"]
+
+  # ───────────────── Triton ─────────────────
+  triton:
+    image: nvcr.io/nvidia/tritonserver:24.05-py3
+    ports:
+      - "8001:8001"
+      - "8002:8002"
+      - "8003:8000"
+    volumes:
+      - ./models:/models:ro
+    command: ["tritonserver", "--model-repository=/models", "--grpc-port=8001", "--http-port=8000", "--metrics-port=8002"]
+
+  # ───────────────── Backing services ─────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: invoice
+      POSTGRES_PASSWORD: invoice
+      POSTGRES_DB: invoice_ocr
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U invoice -d invoice_ocr"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9009:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  redis_data:
+  postgres_data:
+  minio_data:
+  grafana_data:

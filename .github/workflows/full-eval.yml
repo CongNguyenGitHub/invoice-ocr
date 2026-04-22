@@ -1,0 +1,141 @@
+# Full test-set evaluation — the honest, unbiased accuracy signal.
+#
+# Triggers:
+#   - Nightly 03:07 UTC (slight jitter off :00 to avoid the fleet-wide spike)
+#   - On every release tag matching v*
+#   - Manual via Actions UI (workflow_dispatch)
+#
+# On release tags ONLY: writes experiments/final_result.json, bumps
+# experiments/baseline.json, and creates experiments/locked. This commits
+# those updates back to the branch the tag was cut from.
+#
+# Required GitHub secrets:
+#   GEMINI_API_KEY_CI    — same as stack-gate.yml
+name: Full test-set eval
+
+on:
+  schedule:
+    - cron: '7 3 * * *'    # 03:07 UTC daily
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      psv:
+        description: 'PROMPT_SEMANTIC_VERSION override'
+        required: false
+        default: ''
+
+concurrency:
+  group: full-eval-${{ github.ref }}
+  cancel-in-progress: false   # never cancel a tag/scheduled run
+
+jobs:
+  full-eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      PYTHONUNBUFFERED: '1'
+      PROMPT_SEMANTIC_VERSION: ${{ github.event.inputs.psv || vars.PROMPT_SEMANTIC_VERSION || 'v3.7' }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY_CI }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need full history so baseline-bump commits can push
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install runtime + dev deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Stack up (reuse ci_load_test.sh bootstrap)
+        env:
+          SKIP_LOAD_TEST: '1'   # ci_load_test.sh honours this to only spin up
+        run: |
+          docker compose up -d --build
+          # Wait for /readyz up to 180s
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8000/readyz > /dev/null; then
+              echo "Stack ready after ${i}x3s"
+              break
+            fi
+            sleep 3
+          done
+          curl -sf http://localhost:8000/readyz || (echo "Stack failed to become ready" && exit 1)
+
+      - name: Full test-set eval (400 records)
+        env:
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          mkdir -p eval_reports
+          python scripts/run_eval.py \
+            --input data/eval/test_set.json \
+            --workers 4 \
+            --psv "$PROMPT_SEMANTIC_VERSION" \
+            --out eval_reports/
+
+      - name: Accuracy gate (strict mode)
+        id: gate
+        run: |
+          python scripts/check_accuracy.py \
+            --report 'eval_reports/eval_report_*_test_*.json' \
+            --baseline experiments/baseline.json \
+            --mode strict \
+            --out accuracy_gate_result.md
+
+      - name: Append summary to job page
+        if: always()
+        run: cat accuracy_gate_result.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose down -v --remove-orphans || true
+
+      # ─── Release-tag only: lock results + bump baseline ────────────────────
+      - name: Lock results on release tag
+        if: startsWith(github.ref, 'refs/tags/v') && steps.gate.outcome == 'success'
+        run: |
+          cp eval_reports/eval_report_*_test_*.json experiments/final_result.json
+          python scripts/check_accuracy.py \
+            --report 'eval_reports/eval_report_*_test_*.json' \
+            --baseline experiments/baseline.json \
+            --bump-baseline
+          echo "locked $(date -u +%Y-%m-%dT%H:%M:%SZ) tag=${GITHUB_REF_NAME} psv=${PROMPT_SEMANTIC_VERSION}" > experiments/locked
+
+      - name: Commit baseline bump (tag only)
+        if: startsWith(github.ref, 'refs/tags/v') && steps.gate.outcome == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name  "ci-baseline-bump"
+          git config user.email "ci@local"
+          git add experiments/baseline.json experiments/final_result.json experiments/locked
+          if ! git diff --cached --quiet; then
+            git commit -m "ci: bump baseline on release ${GITHUB_REF_NAME}"
+            git push origin HEAD:main || echo "skipping push (detached tag)"
+          fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-eval-${{ github.run_number }}
+          path: |
+            eval_reports/
+            accuracy_gate_result.md
+            experiments/final_result.json
+            experiments/locked
+          retention-days: 90

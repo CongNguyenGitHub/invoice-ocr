@@ -1,0 +1,40 @@
+{
+  "total": 3,
+  "pass_strict": 0,
+  "diffs": [
+    {
+      "i": 0,
+      "http": 200,
+      "diffs": {
+        "name": {
+          "label": "TRUNG TÂM MUA SẮM AEON - BÌNH TÂN",
+          "got": "AEON"
+        }
+      }
+    },
+    {
+      "i": 1,
+      "http": 200,
+      "diffs": {
+        "name": {
+          "label": "TRUNG TÂM MUA SẮM AEON - BÌNH TÂN",
+          "got": "AEON"
+        },
+        "barcode": {
+          "label": "",
+          "got": "000007069192"
+        }
+      }
+    },
+    {
+      "i": 2,
+      "http": 200,
+      "diffs": {
+        "name": {
+          "label": "TRUNG TÂM MUA SẮM AEON - BÌNH TÂN",
+          "got": "AEON"
+        }
+      }
+    }
+  ]
+}

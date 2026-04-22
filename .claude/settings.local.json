@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest tests/unit/test_m0_skeleton.py -q)",
+      "Bash(python -m pytest tests/unit -q)",
+      "Bash(pip install *)",
+      "Bash(python -c \"from pathlib import Path; print\\([str\\(p\\) for p in Path\\('.'\\).rglob\\('*.pt'\\)]\\)\")",
+      "Bash(mkdir -p models/yolov11n_receipt/1)",
+      "Bash(python -c \"import ultralytics; print\\(ultralytics.__version__\\)\")",
+      "Bash(python -c \"from ultralytics import YOLO; m=YOLO\\('yolo-v1-pytorch-default-v1/yolo_weight.pt'\\); m.export\\(format='onnx', imgsz=640, dynamic=True, opset=17\\)\")",
+      "Bash(cp yolo-v1-pytorch-default-v1/yolo_weight.onnx models/yolov11n_receipt/1/model.onnx)",
+      "Bash(python -c \"import onnx; m=onnx.load\\('models/yolov11n_receipt/1/model.onnx'\\); g=m.graph; [print\\('IN', i.name, [d.dim_value or d.dim_param for d in i.type.tensor_type.shape.dim]\\) for i in g.input]; [print\\('OUT', o.name, [d.dim_value or d.dim_param for d in o.type.tensor_type.shape.dim]\\) for o in g.output]\")",
+      "Bash(python -m pytest tests/unit/test_m4_extractor.py -q)",
+      "Bash(python -c \"from src_new.api.app import app; from src_new.worker.main import main; from src_new.worker.loop import execute_task_lifecycle; print\\('ok'\\)\")",
+      "Bash(python -c \"from src_new.worker.sweeper import sweeper_loop; from src_new.worker.rate_refresh import rate_refresh_loop; from src_new.worker.whitelist_reload import start_whitelist_reloader; from src_new.worker.nightly_purge import nightly_purge_loop; print\\('ok'\\)\")",
+      "Bash(python -c \"from src_new.api.app import app; print\\([r.path for r in app.routes if hasattr\\(r,'path'\\)]\\)\")",
+      "Bash(docker --version)",
+      "Bash(docker compose *)",
+      "Bash(docker info *)",
+      "Bash(curl -s http://localhost:8000/healthz)",
+      "Bash(curl -s http://localhost:8000/readyz)",
+      "Bash(curl -s http://localhost:9101/metrics)",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" http://localhost:8000/readyz)",
+      "Bash(python -c ' *)",
+      "Bash(curl *)",
+      "Bash(python *)",
+      "Bash(pip show *)",
+      "Bash(TROLL_API_KEY=\"sk-trollllm-9f1d91291f846e20b1d0fdd7c9ec8b86db33c6015c323a34224a97548af2b6ea\" python *)",
+      "WebSearch",
+      "Bash(python3 -c \"import json; data = json.load\\(open\\('data/eval/dev_set.json'\\)\\); print\\(f'dev_set records: {len\\(data\\)}'\\); from collections import Counter; types = Counter\\(r.get\\('type', 'unknown'\\) for r in data\\); print\\(f'type distribution: {dict\\(types\\)}'\\)\")",
+      "Bash(python3 -c \"import json; data = json.load\\(open\\('data/eval/dev_set.json', encoding='utf-8'\\)\\); print\\(f'dev_set records: {len\\(data\\)}'\\); from collections import Counter; types = Counter\\(r.get\\('type', 'unknown'\\) for r in data\\); print\\(f'type distribution: {dict\\(types\\)}'\\)\")",
+      "Bash(python3 -c \"import json; data = json.load\\(open\\('data/eval/test_set.json', encoding='utf-8'\\)\\); print\\(f'test_set records: {len\\(data\\)}'\\)\")",
+      "Bash(python3 -c \"import json; data = json.load\\(open\\('eval_reports/eval_report_v3.7_dev_20260422_175307.json', encoding='utf-8'\\)\\); print\\(f\\\\\"Field accuracy: {data.get\\('overall_avg_pct', 'N/A'\\)}%\\\\\"\\); fa = data.get\\('field_accuracy', {}\\); print\\(f\\\\\"Name: {fa.get\\('name', {}\\).get\\('pct', 0\\):.1f}%\\\\\"\\); print\\(f\\\\\"Total Money: {fa.get\\('total_money', {}\\).get\\('pct', 0\\):.1f}%\\\\\"\\); print\\(f\\\\\"Product Name: {fa.get\\('product_name', {}\\).get\\('pct', 0\\):.1f}%\\\\\"\\)\")",
+      "Bash(ssh -T git@github.com)",
+      "Bash(git remote *)",
+      "Bash(git config *)",
+      "Bash(git add *)"
+    ]
+  },
+  "spinnerTipsEnabled": false
+}

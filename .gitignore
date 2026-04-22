@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Env
+.env
+*.env.local
+
+# Virtual envs
+venv/
+.venv/
+env/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+reports/
+
+# Mypy
+.mypy_cache/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Docker
+*.override.yml
+
+# Data & models (large, not versioned)
+data/eval_images/
+data/raw/
+whitelists/__pycache__/
+*.onnx
+*.pt
+
+# CI artifacts (generated locally)
+eval_reports/
+load_reports/
+accuracy_gate_result.md
+agr_*.md
+
+# MinIO / local object store
+minio_data/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test fixtures (downloaded at test time, not committed)
+tests/fixtures/replay_images/

@@ -1,0 +1,7 @@
+"""Placeholder prompt — replace with the canonical SYSTEM_PROMPT text before M4
+integration tests. Extractor raises PermanentPipelineError('prompt_file_missing')
+if this file is absent at runtime.
+"""
+You are a Vietnamese retail receipt extraction model.
+Extract the invoice fields as JSON per the provided response schema.
+Do NOT invent any values. Do NOT correct diacritics. Missing field -> empty string.

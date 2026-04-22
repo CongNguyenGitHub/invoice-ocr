@@ -1,0 +1,34 @@
+﻿Scanning 1433 records from golden_clean.json...
+
+=== Per-pattern hit counts ===
+  ΓÜá mid_question_mark           :   11  (0.77%)
+    digit_mid_alpha             :    2  (0.14%)
+
+Newly dirty (any deep error)   :   13  (0.9%)
+Remaining clean after deep scan: 1420  (99.1%)
+
+=== Per-type breakdown ===
+  aeon        :   6 / 171 newly dirty  (3.5%)
+  bhx_2024    :   0 / 197 newly dirty  (0.0%)
+  bigc        :   0 / 202 newly dirty  (0.0%)
+  coopmart    :   1 / 207 newly dirty  (0.5%)
+  coopxtra    :   1 /   6 newly dirty  (16.7%)
+  emart       :   4 / 205 newly dirty  (2.0%)
+  lotte       :   1 / 210 newly dirty  (0.5%)
+  satra       :   0 / 235 newly dirty  (0.0%)
+
+=== Examples per pattern (first 5) ===
+
+-- digit_mid_alpha --
+   [product.product_name] K.CHI CAF CATLATO. KIM'SHOP5C
+   [product.product_name] CL-NUOC RUA CHENHARUT.XANH4K
+
+-- mid_question_mark --
+   [product.product_name] TA?O HO?NG (QUEEN) NEW
+   [product.product_name] GS COUPSELECT 21OP?CX5-HOAL
+   [product.product_name] BBL C├ü B?NG BANG MOCHI SCL ─É?U ─É? 145
+   [product.product_name] BBL CA BANG BANG MOCHI SCL ─É?U ─É? 145
+   [product.product_name] +RONG BI?N BIBIGO CJ TRUYZN THING 4G*
+
+[SAVED] Deep char audit -> C:\Users\NguyenNguyen\Downloads\invoice-ocr\data\ab_test\deep_char_audit.jsonl  (13 records)
+[SAVED] Pattern summary -> C:\Users\NguyenNguyen\Downloads\invoice-ocr\data\ab_test\deep_char_patterns.json

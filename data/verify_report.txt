@@ -1,0 +1,14 @@
+﻿Total golden records: 1420
+  mid-? in product_name         : Γ£à CLEAR
+  ### anywhere                  : ΓÜá∩╕Å  STILL 11 found
+  ??? anywhere                  : Γ£à CLEAR
+
+Type distribution in golden set:
+  satra       : 235
+  lotte       : 209
+  coopmart    : 206
+  bigc        : 202
+  emart       : 201
+  bhx_2024    : 197
+  aeon        : 165
+  coopxtra    : 5
