@@ -95,6 +95,22 @@ chown -R ec2-user:ec2-user "$APP_DIR"
 sudo -u ec2-user -H git -C "$APP_DIR" checkout "$GIT_REF"
 sudo -u ec2-user -H git -C "$APP_DIR" reset --hard "origin/${GIT_REF}"
 
+# ──────────── 2b. Pull Triton model weights from S3 ────────────────────────
+#
+# *.onnx is gitignored (binaries don't belong in git), so the YOLOv11n weights
+# live in s3://invoice-ocr-models-${AWS_ACCOUNT_ID}/yolov11n_receipt/.
+# The instance role grants read-only access via the s3-models-readonly inline
+# policy attached by provision-vps.sh.
+#
+# `aws s3 sync` is idempotent — only downloads if the file is missing or its
+# ETag has changed.
+
+MODELS_BUCKET="${MODELS_BUCKET:-invoice-ocr-models-$(aws sts get-caller-identity --query Account --output text)}"
+log "syncing model weights from s3://${MODELS_BUCKET}/"
+aws s3 sync "s3://${MODELS_BUCKET}/yolov11n_receipt/" "${APP_DIR}/models/yolov11n_receipt/" --quiet
+chown -R ec2-user:ec2-user "${APP_DIR}/models"
+log "✓ model.onnx is $(stat -c%s "${APP_DIR}/models/yolov11n_receipt/1/model.onnx") bytes"
+
 # ──────────── 3. ops/ scripts go to /opt/invoice-ocr ───────────────────────
 
 # Already present in repo at $APP_DIR/ops/.  Make them executable.

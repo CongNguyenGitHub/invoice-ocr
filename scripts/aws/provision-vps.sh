@@ -134,6 +134,20 @@ else
     done
 fi
 
+# Inline policy for read-only access to the models bucket.  Done every run so
+# re-provisioning picks up any bucket-name change.
+ACCOUNT_ID="$("$AWS" sts get-caller-identity --query Account --output text)"
+MODELS_BUCKET="${MODELS_BUCKET:-invoice-ocr-models-${ACCOUNT_ID}}"
+S3_POLICY_TMP="$(mktemp).json"
+cat > "$S3_POLICY_TMP" <<JSON
+{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:ListBucket"],"Resource":["arn:aws:s3:::${MODELS_BUCKET}","arn:aws:s3:::${MODELS_BUCKET}/*"]}]}
+JSON
+"$AWS" iam put-role-policy --role-name "$ROLE_NAME" \
+    --policy-name s3-models-readonly \
+    --policy-document "file://$(cygpath -w "$S3_POLICY_TMP" 2>/dev/null || echo "$S3_POLICY_TMP")" >/dev/null
+rm -f "$S3_POLICY_TMP"
+log "s3-models-readonly policy attached (bucket: $MODELS_BUCKET)"
+
 if ! "$AWS" iam get-instance-profile --instance-profile-name "$PROFILE_NAME" >/dev/null 2>&1; then
     "$AWS" iam create-instance-profile --instance-profile-name "$PROFILE_NAME" >/dev/null
     "$AWS" iam add-role-to-instance-profile --instance-profile-name "$PROFILE_NAME" --role-name "$ROLE_NAME" >/dev/null
