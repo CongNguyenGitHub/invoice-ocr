@@ -69,7 +69,7 @@ jobs:
           python - <<'PY'
           import os, glob, sys, httpx, json, time
           api = os.environ["API"]
-          imgs = sorted(glob.glob("tests/fixtures/replay_images/*"))[:3]
+          imgs = sorted(glob.glob("tests/fixtures/smoke/*.jpg"))[:3]
           if len(imgs) < 3:
               print(f"ERROR: need 3 fixture receipts, have {len(imgs)}")
               sys.exit(1)
