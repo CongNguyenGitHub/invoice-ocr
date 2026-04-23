@@ -38,7 +38,8 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: staging
+    # No `environment:` here — repo-level secrets stay visible.  Staging has no
+    # approval gate (it's the test environment); prod uses environment: production.
 
     env:
       AWS_REGION: us-east-1
