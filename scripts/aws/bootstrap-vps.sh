@@ -113,6 +113,14 @@ systemctl enable invoice-ocr.service
 
 # ──────────── 5. cron — hourly snapshot ────────────────────────────────────
 
+# Amazon Linux 2023 ships systemd-only by default; install cronie if absent
+# so /etc/cron.d works.
+if [[ ! -d /etc/cron.d ]]; then
+    log "installing cronie"
+    dnf -y install cronie
+    systemctl enable --now crond
+fi
+
 # Use a single line in /etc/cron.d so re-running is idempotent
 cat > /etc/cron.d/invoice-ocr-snapshot <<EOF
 # hourly EBS snapshot of the data volume
