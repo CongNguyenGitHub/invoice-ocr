@@ -34,7 +34,10 @@
 set -euo pipefail
 
 : "${ENV:?must set ENV=staging|prod}"
-REPO_URL="${REPO_URL:-https://github.com/CongNguyenGitHub/invoice-ocr.git}"
+# Default to SSH URL — the box is expected to hold a read-only deploy key at
+# ~ec2-user/.ssh/id_ed25519_deploy configured via ~/.ssh/config.  Override to
+# the https URL if you've made the repo public.
+REPO_URL="${REPO_URL:-git@github.com:CongNguyenGitHub/invoice-ocr.git}"
 GIT_REF="${GIT_REF:-main}"
 APP_DIR="/opt/invoice-ocr"
 
@@ -74,15 +77,20 @@ usermod -aG docker ec2-user 2>/dev/null || true
 
 # ──────────── 2. Repo ──────────────────────────────────────────────────────
 
+# For SSH clones, git must run as ec2-user so it picks up the deploy key at
+# /home/ec2-user/.ssh/id_ed25519_deploy (configured via ~/.ssh/config).
+# Also ensure the directory exists and is owned by ec2-user before the clone.
+mkdir -p "$(dirname "$APP_DIR")"
 if [[ ! -d "$APP_DIR/.git" ]]; then
-    log "cloning $REPO_URL → $APP_DIR"
-    git clone "$REPO_URL" "$APP_DIR"
+    log "cloning $REPO_URL → $APP_DIR (as ec2-user)"
+    rm -rf "$APP_DIR"
+    sudo -u ec2-user -H git clone "$REPO_URL" "$APP_DIR"
 else
     log "updating $APP_DIR"
-    git -C "$APP_DIR" fetch --depth 1 origin "$GIT_REF"
+    sudo -u ec2-user -H git -C "$APP_DIR" fetch --depth 1 origin "$GIT_REF"
 fi
-git -C "$APP_DIR" checkout "$GIT_REF"
-git -C "$APP_DIR" reset --hard "origin/${GIT_REF}"
+sudo -u ec2-user -H git -C "$APP_DIR" checkout "$GIT_REF"
+sudo -u ec2-user -H git -C "$APP_DIR" reset --hard "origin/${GIT_REF}"
 chown -R ec2-user:ec2-user "$APP_DIR"
 
 # ──────────── 3. ops/ scripts go to /opt/invoice-ocr ───────────────────────
