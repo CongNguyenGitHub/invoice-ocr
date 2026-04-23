@@ -14,11 +14,11 @@ services:
     build: .
     env_file: .env
     environment:
-      POSTGRES_DSN: postgresql+asyncpg://invoice:invoice@postgres:5432/invoice_ocr
+      POSTGRES_DSN: postgresql+asyncpg://invoice:${POSTGRES_PASSWORD:-invoice}@postgres:5432/invoice_ocr
       REDIS_URL: redis://redis:6379
       MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,11 +37,11 @@ services:
       - "9101:9101"
     env_file: .env
     environment:
-      POSTGRES_DSN: postgresql+asyncpg://invoice:invoice@postgres:5432/invoice_ocr
+      POSTGRES_DSN: postgresql+asyncpg://invoice:${POSTGRES_PASSWORD:-invoice}@postgres:5432/invoice_ocr
       REDIS_URL: redis://redis:6379
       MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       API_METRICS_PORT: "9101"
     depends_on:
       init:
@@ -56,11 +56,11 @@ services:
       replicas: 4
     env_file: .env
     environment:
-      POSTGRES_DSN: postgresql+asyncpg://invoice:invoice@postgres:5432/invoice_ocr
+      POSTGRES_DSN: postgresql+asyncpg://invoice:${POSTGRES_PASSWORD:-invoice}@postgres:5432/invoice_ocr
       REDIS_URL: redis://redis:6379
       MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       TRITON_HOST: triton:8001
       WORKER_METRICS_PORT: "9102"
       WORKER_CONCURRENCY: "4"
@@ -99,7 +99,7 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_USER: invoice
-      POSTGRES_PASSWORD: invoice
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-invoice}
       POSTGRES_DB: invoice_ocr
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U invoice -d invoice_ocr"]
@@ -115,8 +115,8 @@ services:
       - "9000:9000"
       - "9009:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 5s
