@@ -140,8 +140,11 @@ services:
     environment:
       GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
+      # provisioning/ ships the datasource + dashboard-provider configs.
+      # Dashboards JSON lives in a SEPARATE mount so they don't shadow
+      # provisioning/dashboards/dashboards.yml.
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana_data:/var/lib/grafana
 
 volumes:

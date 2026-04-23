@@ -8,4 +8,6 @@ providers:
     disableDeletion: true
     editable: false
     options:
-      path: /etc/grafana/provisioning/dashboards
+      # Loaded from a separate mount so the provisioning/dashboards/ directory
+      # (which ships the provider config) isn't shadowed by the dashboard files.
+      path: /var/lib/grafana/dashboards

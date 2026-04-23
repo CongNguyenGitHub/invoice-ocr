@@ -442,9 +442,9 @@ PR open  ────────►│ 2. stack-gate.yml          path-filtered
    └──────────────────────────────────────┬──────────────────────────────────┘
                                           ▼
    ┌─────────────────────────────────────────────────────────────────────────┐
-   │ 5. verify-staging.yml  (3 parallel jobs, then a gate) ~12 min            │
+   │ 5. verify-staging.yml  (3 parallel jobs, then a gate) ~25 min            │
    │    smoke (3 receipts)                                                   │
-   │    accuracy (run_eval 120 records + check_accuracy --mode smoke)        │
+   │    accuracy (run_eval FULL 400-record test_set + check_accuracy strict) │
    │    load (ci_load_test.sh 3 min @ 3 RPS)                                 │
    └──────────────────────────────────────┬──────────────────────────────────┘
                                           ▼
@@ -515,9 +515,10 @@ The gate compares a new eval report against `experiments/baseline.json` on three
 
 Two modes tune the strictness:
 
-- `--mode smoke` — floors relaxed by −2 pp, drop tolerances × 1.5 — absorbs the
-  ~1–2 pp sampling noise of the 120-record slice used in PR and verify-staging gates.
-- `--mode strict` — raw baseline values, used by full-eval (nightly + release).
+- `--mode smoke` — floors relaxed by −2 pp, drop tolerances × 1.5 — used for PR-time
+  smoke on the 120-record slice (`stack-gate.yml`).
+- `--mode strict` — raw baseline values, used by `verify-staging` (full 400-record
+  test set) and `full-eval` (same sample, nightly + release).
 
 ### Bumping the baseline
 

@@ -95,7 +95,7 @@ jobs:
   accuracy:
     needs: resolve-host
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35   # full 400-record eval can take ~20 min + headroom
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY_CI }}
     steps:
@@ -107,25 +107,24 @@ jobs:
           cache-dependency-path: pyproject.toml
       - run: pip install -e ".[dev]"
 
-      - name: run_eval.py against staging (120 records)
+      - name: run_eval.py against staging (full 400-record test set)
         env:
           API: ${{ needs.resolve-host.outputs.api_url }}
         run: |
           mkdir -p eval_reports
           python scripts/run_eval.py \
             --input data/eval/test_set.json \
-            --max-records 120 \
             --workers 4 \
             --psv "${PROMPT_SEMANTIC_VERSION:-v3.7}" \
             --api "$API" \
             --out eval_reports/
 
-      - name: Accuracy gate (smoke mode)
+      - name: Accuracy gate (strict mode — full sample)
         run: |
           python scripts/check_accuracy.py \
             --report 'eval_reports/eval_report_*_test_*.json' \
             --baseline experiments/baseline.json \
-            --mode smoke \
+            --mode strict \
             --out accuracy_gate_result.md
 
       - name: Append to job summary

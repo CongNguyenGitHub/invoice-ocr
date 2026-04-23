@@ -12,6 +12,7 @@ build/
 
 # Env
 .env
+.env.*
 *.env.local
 
 # Virtual envs
