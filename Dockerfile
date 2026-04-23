@@ -20,7 +20,11 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml ./
-RUN pip install --upgrade pip \
+# Upgrade pip AND setuptools/wheel before installing the project.
+# setuptools vendors jaraco.context + wheel, which carry HIGH CVEs in older
+# versions (CVE-2026-23949 jaraco.context path-traversal, CVE-2026-24049 wheel
+# priv-esc).  Pinning minimums keeps Trivy green.
+RUN pip install --upgrade pip 'setuptools>=78.1.1' 'wheel>=0.46.2' \
  && pip install -e .[dev]
 
 COPY src ./src
