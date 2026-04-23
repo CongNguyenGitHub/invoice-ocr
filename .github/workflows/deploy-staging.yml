@@ -38,8 +38,13 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # No `environment:` here — repo-level secrets stay visible.  Staging has no
-    # approval gate (it's the test environment); prod uses environment: production.
+    # `environment: staging` enables the GitHub Deployments tab.  No protection
+    # rules are configured on the staging environment, so repo-level secrets
+    # remain visible to the job.  Production keeps `environment: production`
+    # with required reviewer protection.
+    environment:
+      name: staging
+      url: http://ec2-13-221-100-159.compute-1.amazonaws.com:8000/healthz
 
     env:
       AWS_REGION: us-east-1
