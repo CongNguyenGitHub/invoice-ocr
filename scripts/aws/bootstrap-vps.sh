@@ -77,21 +77,23 @@ usermod -aG docker ec2-user 2>/dev/null || true
 
 # ──────────── 2. Repo ──────────────────────────────────────────────────────
 
-# For SSH clones, git must run as ec2-user so it picks up the deploy key at
-# /home/ec2-user/.ssh/id_ed25519_deploy (configured via ~/.ssh/config).
-# Also ensure the directory exists and is owned by ec2-user before the clone.
+# /opt is root-owned; we want ec2-user to own $APP_DIR so the deploy SSH key
+# (~ec2-user/.ssh/id_ed25519_deploy) is used for git fetches.
+# Strategy: if the repo is missing, clone fresh as ec2-user into a tmp path
+# under their home (no perms issue), then move it into place as root.
 mkdir -p "$(dirname "$APP_DIR")"
 if [[ ! -d "$APP_DIR/.git" ]]; then
     log "cloning $REPO_URL → $APP_DIR (as ec2-user)"
-    rm -rf "$APP_DIR"
-    sudo -u ec2-user -H git clone "$REPO_URL" "$APP_DIR"
+    rm -rf "$APP_DIR" /home/ec2-user/_clone_tmp
+    sudo -u ec2-user -H git clone "$REPO_URL" /home/ec2-user/_clone_tmp
+    mv /home/ec2-user/_clone_tmp "$APP_DIR"
 else
     log "updating $APP_DIR"
     sudo -u ec2-user -H git -C "$APP_DIR" fetch --depth 1 origin "$GIT_REF"
 fi
+chown -R ec2-user:ec2-user "$APP_DIR"
 sudo -u ec2-user -H git -C "$APP_DIR" checkout "$GIT_REF"
 sudo -u ec2-user -H git -C "$APP_DIR" reset --hard "origin/${GIT_REF}"
-chown -R ec2-user:ec2-user "$APP_DIR"
 
 # ──────────── 3. ops/ scripts go to /opt/invoice-ocr ───────────────────────
 
