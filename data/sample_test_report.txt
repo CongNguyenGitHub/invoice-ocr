@@ -1,2 +1,0 @@
-﻿Saved 300 records ΓåÆ data\ab_test\test_set_300.json
-Meta  ΓåÆ data\ab_test\test_set_300_meta.csv
