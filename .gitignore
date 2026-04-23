@@ -55,6 +55,16 @@ minio_data/
 # Logs
 *.log
 
+# Raw label / correction working files (large data artefacts)
+label_verified.json
+label_corrected.json
+label_corrected_sample.json
+correction_report.jsonl
+correction_report_sample.jsonl
+data/ab_test/
+data/ab_test_audit*.txt
+data/audit_report*.txt
+
 # OS
 .DS_Store
 Thumbs.db

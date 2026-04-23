@@ -15,11 +15,10 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import sys
 import time
-from pathlib import Path
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import httpx
 
@@ -115,15 +114,14 @@ def compare_field(pred: str, gt: str, field_name: str) -> bool | None:
 
     if field_name in ("total_money", "product_unit_price", "product_total_money"):
         return _normalize_money_for_compare(pred) == _normalize_money_for_compare(gt)
-        
+
     if field_name == "barcode":
         return pred.replace('*', '') == gt.replace('*', '')
-        
+
     if field_name == "product_quantity":
-        import re
         from src.pipeline.postprocessor import _normalize_quantity
         return _normalize_quantity(pred) == _normalize_quantity(gt)
-        
+
     if field_name == "product_name":
         import difflib
         return difflib.SequenceMatcher(None, pred, gt).ratio() > 0.95
@@ -135,7 +133,7 @@ def evaluate_single(pred: dict, gt: dict) -> tuple[dict[str, list[bool]], list[d
     """Compare predicted vs ground truth for a single record."""
     results = {}
     mismatches = []
-    
+
     # Base fields
     base_fields = ["name", "type", "date", "time", "pos_id", "receipt_number", "cashier", "total_money", "barcode"]
     for field_name in base_fields:
@@ -150,57 +148,57 @@ def evaluate_single(pred: dict, gt: dict) -> tuple[dict[str, list[bool]], list[d
                     "expected": str(gt_val).strip(),
                     "predicted": str(pred_val).strip()
                 })
-        
+
     # Product fields
     gt_products = gt.get("products", [])
     raw_pred_products = pred.get("products", [])
-    
+
     # Greedy alignment of products to prevent order swaps from destroying accuracy
     aligned_pred = []
     used_pred_indices = set()
-    
+
     for gt_idx, gt_p in enumerate(gt_products):
         best_match_idx = -1
         best_match_score = -1
-        
+
         gt_price = _normalize_money_for_compare(gt_p.get("product_unit_price", ""))
         gt_total = _normalize_money_for_compare(gt_p.get("product_total_money", ""))
         gt_name = str(gt_p.get("product_name", "")).strip().lower()
-        
+
         for pred_idx, pred_p in enumerate(raw_pred_products):
             if pred_idx in used_pred_indices: continue
-            
+
             pr_price = _normalize_money_for_compare(pred_p.get("product_unit_price", ""))
             pr_total = _normalize_money_for_compare(pred_p.get("product_total_money", ""))
             pr_name = str(pred_p.get("product_name", "")).strip().lower()
-            
+
             score = 0
             if gt_price and pr_price == gt_price: score += 2
             if gt_total and pr_total == gt_total: score += 2
             if gt_name and pr_name == gt_name: score += 3
-            
+
             if score > best_match_score:
                 best_match_score = score
                 best_match_idx = pred_idx
-                
+
         if best_match_idx != -1 and best_match_score > 0:
             aligned_pred.append(raw_pred_products[best_match_idx])
             used_pred_indices.add(best_match_idx)
         else:
             aligned_pred.append({})
-            
+
     # Append leftover unmapped preds
     for pred_idx, pred_p in enumerate(raw_pred_products):
         if pred_idx not in used_pred_indices:
             aligned_pred.append(pred_p)
-            
+
     pred_products = aligned_pred
     product_fields = ["product_id", "product_name", "product_unit_price", "product_quantity", "product_total_money"]
-    
+
     for i in range(max(len(gt_products), len(pred_products))):
         gt_p = gt_products[i] if i < len(gt_products) else {}
         pred_p = pred_products[i] if i < len(pred_products) else {}
-        
+
         for field_name in product_fields:
             gt_val = gt_p.get(field_name, "")
             pred_val = pred_p.get(field_name, "")
@@ -213,7 +211,7 @@ def evaluate_single(pred: dict, gt: dict) -> tuple[dict[str, list[bool]], list[d
                         "expected": str(gt_val).strip(),
                         "predicted": str(pred_val).strip()
                     })
-            
+
     return results, mismatches
 
 
@@ -306,7 +304,7 @@ def main():
         field_results, mismatches = evaluate_single(pred, gt)
         if mismatches:
             report.mismatches[img_url] = mismatches
-            
+
         for field_name, is_correct_list in field_results.items():
             if field_name not in report.field_accuracy:
                 report.field_accuracy[field_name] = FieldAccuracy()
@@ -320,7 +318,7 @@ def main():
         if store_type not in report.per_store:
             report.per_store[store_type] = {"total": 0, "correct_total_money": 0}
         report.per_store[store_type]["total"] += 1
-        
+
         # Check if total money exists, and check if all is correct for this receipt
         money_list = field_results.get("total_money", [])
         if money_list and all(money_list):
@@ -352,12 +350,12 @@ def main():
 
     # Print summary
     print(f"\n{'='*50}")
-    print(f"EVALUATION REPORT")
+    print("EVALUATION REPORT")
     print(f"{'='*50}")
     print(f"Total: {report.total_samples} | Success: {report.successful} | Failed: {report.failed}")
     print(f"Avg time: {report.avg_time:.2f}s")
     print(f"\nOverall Average Accuracy: {avg_acc*100:.1f}%\n")
-    print(f"\nField Accuracy:")
+    print("\nField Accuracy:")
     for name, fa in report.field_accuracy.items():
         print(f"  {name:20s}: {fa.accuracy*100:5.1f}% ({fa.correct}/{fa.total})")
     print(f"\nReport saved to: {args.output}")

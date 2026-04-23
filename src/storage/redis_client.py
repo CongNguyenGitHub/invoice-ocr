@@ -13,7 +13,8 @@ from uuid import UUID
 
 import redis.asyncio as redis_async
 from redis.exceptions import ConnectionError as RedisConnectionError
-from redis.exceptions import RedisError, TimeoutError as RedisTimeoutError
+from redis.exceptions import RedisError
+from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from src.config import settings
 from src.domain.constants import (

@@ -58,6 +58,27 @@ line-length = 120
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
 
+# Per-file ignores — rationale documented inline.
+#
+# Legacy CLI helper scripts predate the current ruff config. They are not part of
+# the runtime path (only invoked by hand by data-engineering). We keep them lint-
+# clean for the high-signal rules but accept their stylistic warts rather than
+# rewrite working code.
+[tool.ruff.lint.per-file-ignores]
+# Legacy data-engineering scripts: tolerate one-line if/return, post-sys.path imports,
+# legacy ALL_CAPS local constants, and generous log-line widths.
+"scripts/audit_ocr_errors.py"  = ["E701", "E702"]
+"scripts/correct_gt_labels.py" = ["E701", "E702"]
+"scripts/evaluate.py"          = ["E701", "E702"]
+"scripts/run_eval.py"          = ["E402", "E701", "E702"]   # imports after sys.path tweak; tight conditional one-liners in scoring loop
+"scripts/run_experiment.py"    = ["E501"]                    # one long markdown row
+"scripts/schema_align.py"      = ["E402"]
+"scripts/smoke_e2e.py"         = ["E741"]                    # `l` is the local variable name in the legacy script
+"scripts/test_burst.py"        = ["E501"]                    # log-format strings
+"scripts/verify_gt_labels.py"  = ["E702", "N806"]            # log+return one-liners; CONF_RANK is a legacy constant inside a function
+"scripts/load_test.py"         = ["E501"]
+"scripts/verify_golden.py"     = ["E501"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

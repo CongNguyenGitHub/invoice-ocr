@@ -48,7 +48,7 @@ def _install_fake_genai(monkeypatch, generate: AsyncMock) -> None:
     aio_models = MagicMock()
     aio_models.generate_content = generate
     fake_aio = MagicMock(models=aio_models)
-    fake_client = MagicMock(aio=fake_aio)
+    MagicMock(aio=fake_aio)
 
     class _GenaiClient:
         def __init__(self, api_key: str) -> None:

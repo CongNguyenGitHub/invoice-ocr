@@ -96,10 +96,10 @@ def detect_question_placeholder(inv: dict) -> list[str]:
                 for i, ch in enumerate(core):
                     if ch != "?":
                         continue
-                        
+
                     left_ok = i > 0 and (core[i-1].isalpha() or core[i-1].isdigit())
                     right_ok = i < len(core)-1 and (core[i+1].isalpha() or core[i+1].isdigit())
-                    
+
                     if left_ok or right_ok:
                         errors.append("mid_question_mark")
                         break

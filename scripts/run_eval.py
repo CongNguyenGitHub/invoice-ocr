@@ -77,8 +77,8 @@ POLL_MAX_WAIT  = 120.0 # s max poll time per job
 
 # ── Field comparison helpers (inlined — no src.* deps) ───────────────────────
 
-import re
 import difflib
+import re
 
 
 def _normalize_money_for_compare(value: str) -> str:
@@ -419,7 +419,7 @@ def main() -> int:
             _build_pred_skeleton(rec_result["mismatches"], gt),
             gt,
         )
-        mismatch_fields = {m["field"] for m in rec_result["mismatches"]}
+        {m["field"] for m in rec_result["mismatches"]}
 
         for field_name, bool_list in field_results.items():
             for is_correct in bool_list:
@@ -512,7 +512,8 @@ def _build_pred_skeleton(mismatches: list[dict], gt: dict) -> dict:
     For fields IN mismatches, use the predicted value from the mismatch record.
     This lets us re-run evaluate_single to get the full field_results dict.
     """
-    import copy, re
+    import copy
+    import re
     pred = copy.deepcopy(gt)
     for m in mismatches:
         field = m["field"]

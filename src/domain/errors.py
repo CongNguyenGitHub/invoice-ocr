@@ -28,7 +28,7 @@ class IngressError(OCRSystemError):
     is_permanent = True
 
 
-class UnsupportedMediaType(IngressError):
+class UnsupportedMediaType(IngressError):  # noqa: N818 — domain error name, not *Error
     error_code = "unsupported_media_type"
     is_permanent = True
 
@@ -36,7 +36,7 @@ class UnsupportedMediaType(IngressError):
         super().__init__(self.error_code, message)
 
 
-class PayloadTooLarge(IngressError):
+class PayloadTooLarge(IngressError):  # noqa: N818 — domain error name, not *Error
     error_code = "payload_too_large"
     is_permanent = True
 
@@ -118,7 +118,7 @@ class StorageTransientError(StorageError):
         super().__init__(self.error_code, message)
 
 
-class DatabaseUnavailable(StorageError):
+class DatabaseUnavailable(StorageError):  # noqa: N818 — domain error name, not *Error
     """asyncpg PostgresError — mapped via @_wrap_pg_errors decorator."""
 
     error_code = "database_unavailable"

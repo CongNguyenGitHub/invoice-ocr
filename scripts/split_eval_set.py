@@ -47,7 +47,6 @@ def _is_missing_critical(inv: dict) -> bool:
 
 
 def main() -> int:
-    import io, os
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser(description=__doc__,
@@ -163,7 +162,7 @@ def main() -> int:
                 "verify_status": rec.get("_verify_status", ""),
             })
 
-    print(f"\nOutputs:")
+    print("\nOutputs:")
     print(f"  {dev_path}   ({len(dev_items)} records)")
     print(f"  {test_path}  ({len(test_items)} records)")
     print(f"  {csv_path}")

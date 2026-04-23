@@ -79,9 +79,9 @@ async def _run() -> int:
     # Daemons (registered in M6 — keep registration here)
     daemons: list[Callable[[], Awaitable[None]]] = []
     try:
-        from src.worker.sweeper import sweeper_loop
-        from src.worker.rate_refresh import rate_refresh_loop
         from src.worker.nightly_purge import nightly_purge_loop
+        from src.worker.rate_refresh import rate_refresh_loop
+        from src.worker.sweeper import sweeper_loop
         daemons.extend([
             lambda: sweeper_loop(_shutdown),
             lambda: rate_refresh_loop(_shutdown, bucket),

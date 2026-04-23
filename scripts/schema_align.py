@@ -1,6 +1,6 @@
 """
 schema_align.py — Align the dataset with the schema defined in src.schemas.invoice.InvoiceResult.
-It will project out any extra fields not defined in the schema to ensure our ground truth directly 
+It will project out any extra fields not defined in the schema to ensure our ground truth directly
 matches what the A/B evaluation expects.
 """
 import argparse
@@ -14,13 +14,14 @@ sys.path.insert(0, str(root))
 
 from src.schemas.invoice import InvoiceResult
 
+
 def main(src: str, out: str):
     print(f"Loading {src}...")
     with open(src, encoding="utf-8") as f:
         data = json.load(f)
 
     aligned_data = []
-    
+
     invoice_schema_fields = InvoiceResult.model_fields.keys()
     # To get the product schema fields we need to inspect the inner type
     product_schema_fields = InvoiceResult.model_fields['products'].annotation.__args__[0].model_fields.keys()
@@ -28,11 +29,11 @@ def main(src: str, out: str):
     for item in data:
         # Keep only fields that exist in InvoiceResult
         aligned_item = {k: v for k, v in item.items() if k in invoice_schema_fields}
-        
+
         # Explicitly keep the 'file' field for A/B testing image URLs
         if 'file' in item:
             aligned_item['file'] = item['file']
-        
+
         # Handle the products list
         if 'products' in aligned_item:
             aligned_products = []
@@ -43,7 +44,7 @@ def main(src: str, out: str):
                 else:
                     aligned_products.append(prod)
             aligned_item['products'] = aligned_products
-            
+
         aligned_data.append(aligned_item)
 
     print("Checking alignment by validating against the pydantic schema...")
@@ -57,7 +58,7 @@ def main(src: str, out: str):
             sys.exit(1)
 
     print("All records validated successfully against the schema.")
-    
+
     with open(out, "w", encoding="utf-8") as f:
         json.dump(aligned_data, f, ensure_ascii=False, indent=2)
 

@@ -225,7 +225,7 @@ async def execute_task_lifecycle(
             await _fail(job_id, minio_key, failed_minio_key,
                         is_permanent=True, error_code=e.error_code, error_message=str(e))
             return
-        except StorageTransientError as e:
+        except StorageTransientError:
             count = await _bump_or_orphan(job_id, minio_key, failed_minio_key)
             if count is None:
                 return
@@ -293,7 +293,7 @@ async def execute_task_lifecycle(
             except RateLimitedLocallyError:
                 await _yield_to_queue(job_id)
                 return
-            except GeminiExhaustedError as e:
+            except GeminiExhaustedError:
                 count = await _bump_or_orphan(job_id, minio_key, failed_minio_key)
                 if count is None:
                     return

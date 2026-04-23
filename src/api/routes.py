@@ -22,7 +22,7 @@ import uuid
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, File, HTTPException, Request, Response, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Request, Response, UploadFile
 from fastapi.responses import JSONResponse
 
 from src.api.backpressure import check_backpressure
@@ -37,7 +37,7 @@ from src.domain.errors import (
 )
 from src.logging_config import job_id_var
 from src.pipeline.preprocessor import preprocess_image
-from src.schemas import ErrorPayload, InvoiceResult, PendingEnvelope
+from src.schemas import ErrorPayload, PendingEnvelope
 from src.storage.minio_client import minio
 from src.storage.postgres_client import pg
 from src.storage.redis_client import redis
@@ -195,6 +195,7 @@ async def healthz() -> dict:
 @router.get("/readyz")
 async def readyz() -> Response:
     import asyncio as _asyncio
+
     from src.pipeline.triton_client import is_ready as triton_ready
 
     results = await _asyncio.gather(

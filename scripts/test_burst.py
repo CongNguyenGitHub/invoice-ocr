@@ -4,6 +4,7 @@ import json
 import random
 import time
 from pathlib import Path
+
 import httpx
 
 API_URL = "http://127.0.0.1:8000/api/v1/invoices"
@@ -14,7 +15,7 @@ async def process_single_image(client: httpx.AsyncClient, item: dict, index: int
         return {"status": "error", "error": "No URL"}
 
     start_time = time.time()
-    
+
     # 1. Download image from the GotIt CDN/URL
     try:
         resp = await client.get(url, timeout=15.0)
@@ -22,10 +23,10 @@ async def process_single_image(client: httpx.AsyncClient, item: dict, index: int
         image_bytes = resp.content
     except Exception as e:
         return {
-            "index": index, 
-            "status": "download_failed", 
-            "url": url, 
-            "error": str(e), 
+            "index": index,
+            "status": "download_failed",
+            "url": url,
+            "error": str(e),
             "time": time.time() - start_time
         }
 
@@ -46,18 +47,18 @@ async def process_single_image(client: httpx.AsyncClient, item: dict, index: int
     except httpx.HTTPStatusError as e:
         error_msg = f"HTTP Error: {e.response.status_code} - {e.response.text}"
         return {
-            "index": index, 
-            "status": "submit_failed", 
-            "url": url, 
-            "error": error_msg, 
+            "index": index,
+            "status": "submit_failed",
+            "url": url,
+            "error": error_msg,
             "time": time.time() - start_time
         }
     except Exception as e:
         return {
-            "index": index, 
-            "status": "submit_failed", 
-            "url": url, 
-            "error": repr(e), 
+            "index": index,
+            "status": "submit_failed",
+            "url": url,
+            "error": repr(e),
             "time": time.time() - start_time
         }
 
@@ -68,7 +69,7 @@ async def process_single_image(client: httpx.AsyncClient, item: dict, index: int
             poll_resp.raise_for_status()
             job_data = poll_resp.json()
             status = job_data["status"]
-            
+
             if status in ("completed", "failed"):
                 end_time = time.time()
                 return {
@@ -81,13 +82,13 @@ async def process_single_image(client: httpx.AsyncClient, item: dict, index: int
                 }
         except Exception as e:
             return {
-                "index": index, 
-                "job_id": job_id, 
-                "status": "poll_failed", 
-                "error": str(e), 
+                "index": index,
+                "job_id": job_id,
+                "status": "poll_failed",
+                "error": str(e),
                 "time": time.time() - start_time
             }
-        
+
         await asyncio.sleep(2.0)
 
 async def main():
@@ -106,7 +107,7 @@ async def main():
 
     # Filter items with valid URLs
     valid_items = [item for item in data if item.get("file")]
-    
+
     if not valid_items:
         print("No valid URLs found in the JSON file.")
         return
@@ -116,9 +117,9 @@ async def main():
 
     print(f"\n🚀 Selecting {num_samples} images for burst testing...")
     print("Starting concurrent burst (downloading and submitting)...\n")
-    
+
     start_time = time.time()
-    
+
     # Use limits to avoid completely exhausting local sockets if N is very large
     limits = httpx.Limits(max_connections=200, max_keepalive_connections=50)
     async with httpx.AsyncClient(limits=limits) as client:
@@ -131,9 +132,9 @@ async def main():
     successes = [r for r in results if r["status"] == "completed"]
     failures = [r for r in results if r["status"] not in ("completed", "download_failed")]
     downloads_failed = [r for r in results if r["status"] == "download_failed"]
-    
+
     success_times = [r["time"] for r in successes]
-    
+
     print("=" * 50)
     print("📊 BURST TEST RESULTS")
     print("=" * 50)
@@ -145,7 +146,7 @@ async def main():
         print(f"Image D/L Failed     : {len(downloads_failed)} (External image links dead/timed out, not counted via API)")
 
     if success_times:
-        print(f"\n⏱️ Performance (Successful jobs lifecycle):")
+        print("\n⏱️ Performance (Successful jobs lifecycle):")
         print(f"  Average Time : {sum(success_times)/len(success_times):.2f}s")
         print(f"  Min Time     : {min(success_times):.2f}s")
         print(f"  Max Time     : {max(success_times):.2f}s")

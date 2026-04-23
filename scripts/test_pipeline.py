@@ -1,5 +1,6 @@
-import traceback
 import logging
+import traceback
+
 from src.pipeline.runner import run_pipeline
 
 logging.basicConfig(level=logging.INFO)
@@ -15,5 +16,5 @@ try:
     print(f'YOLO conf: {result.yolo_confidence:.3f}')
     print(f'Fallback: {result.yolo_used_fallback}')
     print(f'Timings: {result.timings}')
-except Exception as e:
+except Exception:
     print(traceback.format_exc())

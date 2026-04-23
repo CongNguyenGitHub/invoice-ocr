@@ -247,7 +247,7 @@ def _download(url: str, retries: int = 3) -> bytes:
             req = Request(url, headers={"User-Agent": "verify/1.0"})
             with urlopen(req, timeout=30) as r:
                 return r.read()
-        except Exception as exc:
+        except Exception:
             if attempt == retries - 1:
                 raise
             time.sleep(1.5 ** attempt)
@@ -406,7 +406,7 @@ def triage(orig_idx: int, inv: dict, arith: dict,
         correct_val = str(corr.get("correct_value") or "").strip()
         label_val   = str(corr.get("label_value") or "").strip()
         confidence  = corr.get("confidence", "low")
-        reason      = corr.get("reason", "")
+        corr.get("reason", "")
 
         if _norm(correct_val) == _norm(label_val):
             continue  # spurious diff

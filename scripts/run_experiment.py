@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -129,7 +128,7 @@ def _append_comparison_row(run_no: int | str, metrics: dict, notes: str) -> None
 def _run_eval(input_path: str, psv: str, split: str,
               workers: int, extra_args: list[str]) -> Path:
     """Call run_eval.py as a subprocess and return the report path."""
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    datetime.now().strftime("%Y%m%d_%H%M%S")
     out_dir = Path("eval_reports")
     out_dir.mkdir(exist_ok=True)
 
@@ -143,7 +142,7 @@ def _run_eval(input_path: str, psv: str, split: str,
     ] + extra_args
 
     print(f"\n> Running: {' '.join(cmd)}\n")
-    result = subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True)
 
     # Find the report that was just written
     candidates = sorted(
@@ -207,7 +206,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     print(f"  Comparison -> {COMPARISON_FILE}")
     print(f"  Runs used: {run_no}/{MAX_RUNS}")
     if run_no == MAX_RUNS:
-        print(f"\n⚠  Budget exhausted. Run --final when ready for test-set evaluation.")
+        print("\n⚠  Budget exhausted. Run --final when ready for test-set evaluation.")
 
     return 0
 
@@ -253,10 +252,10 @@ def cmd_final(args: argparse.Namespace) -> int:
         f"Locked at {datetime.now().isoformat()} by final eval psv={args.psv}\n"
     )
 
-    print(f"\n✓ Final eval complete.")
+    print("\n✓ Final eval complete.")
     print(f"  Final result -> {FINAL_FILE}")
     print(f"  Comparison   -> {COMPARISON_FILE}")
-    print(f"  Experiments locked (delete experiments/locked to reset)")
+    print("  Experiments locked (delete experiments/locked to reset)")
     return 0
 
 

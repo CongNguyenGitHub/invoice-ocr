@@ -130,7 +130,7 @@ def _download(url: str, retries: int = 3) -> bytes:
             req = Request(url, headers={"User-Agent": "gt-corrector/1.0"})
             with urlopen(req, timeout=30) as r:
                 return r.read()
-        except Exception as exc:
+        except Exception:
             if attempt == retries - 1:
                 raise
             time.sleep(1.5 ** attempt)
@@ -414,7 +414,7 @@ def main() -> int:
         target_kinds.add("truncated_name")
 
     # Build dirty list, tracking ORIGINAL index in all_records
-    type_offset = {r["_orig"]: r for r in work_records} if False else {}
+    {r["_orig"]: r for r in work_records} if False else {}
     # We need orig index in all_records, not work_records
     dirty: list[tuple[int, dict, list[dict]]] = []
     for orig_idx, inv in enumerate(all_records):
@@ -445,7 +445,7 @@ def main() -> int:
         for e in errs:
             kind_counts[e["kind"]] = kind_counts.get(e["kind"], 0) + 1
 
-    print(f"\n=== Error scan ===")
+    print("\n=== Error scan ===")
     print(f"Dirty records : {len(dirty)} / {len(all_records)} "
           f"({100*len(dirty)/max(len(all_records),1):.1f}%)")
     for kind, count in sorted(kind_counts.items(), key=lambda x: -x[1]):
