@@ -1,6 +1,16 @@
 services:
   # ───────────────── Init (alembic + buckets + lifecycles) ─────────────────
+  #
+  # IMAGE selection:
+  #   Local dev:     leave IMAGE unset → falls back to "invoice-ocr:local",
+  #                  and the build: directive rebuilds it from the local Dockerfile.
+  #   CI / deploy:   `IMAGE=ghcr.io/owner/invoice-ocr:sha-abc1234 docker compose up -d`
+  #                  pulls the pinned image instead of building.
+  #
+  # All three Python services (init, api, worker) share the same image tag so
+  # an atomic deploy of one SHA touches every service consistently.
   init:
+    image: ${IMAGE:-invoice-ocr:local}
     build: .
     env_file: .env
     environment:
@@ -20,6 +30,7 @@ services:
 
   # ───────────────── API ─────────────────
   api:
+    image: ${IMAGE:-invoice-ocr:local}
     build: .
     ports:
       - "8000:8000"
@@ -39,6 +50,7 @@ services:
 
   # ───────────────── Worker (4 replicas × 4 async tasks) ─────────────────
   worker:
+    image: ${IMAGE:-invoice-ocr:local}
     build: .
     deploy:
       replicas: 4

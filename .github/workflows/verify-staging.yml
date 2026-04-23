@@ -1,0 +1,195 @@
+# Verify staging — three parallel jobs, gate aggregates.
+#
+# Fires after a successful deploy-staging.yml run.
+#
+#   1. smoke    : 3 receipts via POST /v1/receipts must all return 200
+#   2. accuracy : run_eval.py on 120-record slice of test set + check_accuracy --mode smoke
+#   3. load     : ci_load_test.sh against staging URL (p95 / p99 / err-rate SLA)
+#
+# Each job uploads its own artifact.  The final `gate` job fails if ANY parallel
+# job failed — prod promotion is blocked until this is green.
+name: Verify staging
+
+on:
+  workflow_run:
+    workflows: ["Deploy → staging"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-staging
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  resolve-host:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      api_url: ${{ steps.out.outputs.api_url }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            us-east-1
+      - id: out
+        run: |
+          DNS=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=invoice-ocr-staging" \
+                      "Name=instance-state-name,Values=running" \
+            --query 'Reservations[0].Instances[0].PublicDnsName' --output text)
+          echo "api_url=http://${DNS}:8000" >> "$GITHUB_OUTPUT"
+
+  smoke:
+    needs: resolve-host
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install httpx pillow imagehash
+
+      - name: Smoke — 3 receipts via POST
+        env:
+          API: ${{ needs.resolve-host.outputs.api_url }}
+        run: |
+          python - <<'PY'
+          import os, glob, sys, httpx, json, time
+          api = os.environ["API"]
+          imgs = sorted(glob.glob("tests/fixtures/replay_images/*"))[:3]
+          if len(imgs) < 3:
+              print(f"ERROR: need 3 fixture receipts, have {len(imgs)}")
+              sys.exit(1)
+          fail = 0
+          for p in imgs:
+              with open(p, "rb") as fh:
+                  data = fh.read()
+              t0 = time.time()
+              try:
+                  r = httpx.post(f"{api}/v1/receipts",
+                                 files={"file": (os.path.basename(p), data, "image/jpeg")},
+                                 timeout=60.0)
+              except Exception as exc:
+                  print(f"FAIL  {p}  network: {exc}")
+                  fail += 1; continue
+              lat = time.time() - t0
+              print(f"{r.status_code:3d}  {p}  {lat:.2f}s")
+              if r.status_code not in (200, 202):
+                  fail += 1
+          sys.exit(1 if fail else 0)
+          PY
+
+  accuracy:
+    needs: resolve-host
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY_CI }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: pip install -e ".[dev]"
+
+      - name: run_eval.py against staging (120 records)
+        env:
+          API: ${{ needs.resolve-host.outputs.api_url }}
+        run: |
+          mkdir -p eval_reports
+          python scripts/run_eval.py \
+            --input data/eval/test_set.json \
+            --max-records 120 \
+            --workers 4 \
+            --psv "${PROMPT_SEMANTIC_VERSION:-v3.7}" \
+            --api "$API" \
+            --out eval_reports/
+
+      - name: Accuracy gate (smoke mode)
+        run: |
+          python scripts/check_accuracy.py \
+            --report 'eval_reports/eval_report_*_test_*.json' \
+            --baseline experiments/baseline.json \
+            --mode smoke \
+            --out accuracy_gate_result.md
+
+      - name: Append to job summary
+        if: always()
+        run: cat accuracy_gate_result.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: accuracy-report
+          path: |
+            eval_reports/
+            accuracy_gate_result.md
+          retention-days: 14
+
+  load:
+    needs: resolve-host
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: pip install -e ".[dev]"
+
+      - name: Load test (3 min @ 3 RPS against staging)
+        env:
+          LOAD_TEST_API: ${{ needs.resolve-host.outputs.api_url }}
+          SKIP_DOCKER:   '1'
+          LOAD_TEST_INPUT: data/eval/dev_set.json
+        run: bash scripts/ci_load_test.sh
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-report
+          path: load_reports/
+          retention-days: 14
+
+  gate:
+    needs: [smoke, accuracy, load]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate
+        run: |
+          s="${{ needs.smoke.result }}"
+          a="${{ needs.accuracy.result }}"
+          l="${{ needs.load.result }}"
+          echo "smoke=$s  accuracy=$a  load=$l"
+          [[ "$s" == "success" && "$a" == "success" && "$l" == "success" ]] || exit 1
+      - name: Summary
+        if: always()
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## Verify staging
+
+          | Check      | Result |
+          |------------|--------|
+          | Smoke      | ${{ needs.smoke.result    }} |
+          | Accuracy   | ${{ needs.accuracy.result }} |
+          | Load       | ${{ needs.load.result     }} |
+
+          EOF

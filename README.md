@@ -410,15 +410,98 @@ For sustained load:
 
 ---
 
-## CI Gates
+## CI/CD
 
-Three GitHub Actions workflows gate every change before merge:
+**Host model.** Staging and prod each run the full `docker compose` stack on a single
+EC2 VPS in `us-east-1`. Chosen over ECS/Fargate for debuggability at this stage —
+when something's weird at 2 am you just `ssh ec2-user@host && make logs`.
 
-| Workflow                    | Trigger                                        | Time   | What it checks                                                                                          |
-|-----------------------------|------------------------------------------------|--------|---------------------------------------------------------------------------------------------------------|
-| **fast-checks.yml**         | Every PR + push to main                        | ~2 min | `ruff`, `mypy` (warn-only), `pytest tests/unit tests/integration` (57 tests: schema, replay, backpressure math) |
-| **stack-gate.yml**          | PRs touching `src/**`, `whitelists/**`, compose, prompt, eval scripts | ~15 min | Docker stack up → `ci_load_test.sh` (p95<10s, p99<30s, err<1%) → `run_eval.py` on 120 test records → `check_accuracy.py --mode smoke` |
-| **full-eval.yml**           | Nightly 03:07 UTC + release tags `v*` + manual | ~25 min | Full 400-record test-set eval → `check_accuracy.py --mode strict`; on release tag also bumps baseline & commits |
+### Pipeline overview
+
+```
+                  ┌─────────────────────────────────────────────────┐
+PR open  ────────►│ 1. fast-checks.yml         every PR · ~2 min    │
+                  │    ruff · mypy · pytest (57 tests)              │
+                  └─────────────────────────────────────────────────┘
+                                          │
+                  ┌─────────────────────────────────────────────────┐
+PR open  ────────►│ 2. stack-gate.yml          path-filtered · ~12m │
+                  │    docker stack · load · 120-rec accuracy       │
+                  └─────────────────────────────────────────────────┘
+
+                            merge to main
+                                          │
+   ┌──────────────────────────────────────┴──────────────────────────────────┐
+   │ 3. build-push.yml                                  ~6 min                │
+   │    docker build · Trivy CVE scan · push ghcr.io:sha-xxx + :staging      │
+   └──────────────────────────────────────┬──────────────────────────────────┘
+                                          ▼
+   ┌─────────────────────────────────────────────────────────────────────────┐
+   │ 4. deploy-staging.yml                              ~5 min                │
+   │    SSH staging VPS · docker compose pull + up -d · poll /readyz         │
+   └──────────────────────────────────────┬──────────────────────────────────┘
+                                          ▼
+   ┌─────────────────────────────────────────────────────────────────────────┐
+   │ 5. verify-staging.yml  (3 parallel jobs, then a gate) ~12 min            │
+   │    smoke (3 receipts)                                                   │
+   │    accuracy (run_eval 120 records + check_accuracy --mode smoke)        │
+   │    load (ci_load_test.sh 3 min @ 3 RPS)                                 │
+   └──────────────────────────────────────┬──────────────────────────────────┘
+                                          ▼
+   ┌─────────────────────────────────────────────────────────────────────────┐
+   │ 6. deploy-prod.yml         MANUAL dispatch + approval · ~6 min           │
+   │    Re-tag ghcr.io image as :production                                  │
+   │    SSH prod VPS · deploy-here.sh · 3-receipt smoke                      │
+   │    On failure → auto rollback to .previous_sha                          │
+   └─────────────────────────────────────────────────────────────────────────┘
+
+   ┌─────────────────────────────────────────────────────────────────────────┐
+   │ 7. full-eval.yml         nightly 03:07 UTC + release tags · ~25 min      │
+   │    400-record test-set eval · baseline bump on release tag              │
+   └─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Workflows at a glance
+
+| Workflow                | File                                     | Trigger                                        | Notes                                                    |
+|-------------------------|------------------------------------------|------------------------------------------------|----------------------------------------------------------|
+| **fast-checks**         | `.github/workflows/fast-checks.yml`      | every PR + push to main                        | ruff + mypy (warn-only) + pytest                         |
+| **stack-gate**          | `.github/workflows/stack-gate.yml`       | PR touching `src/**`, compose, prompts         | full docker stack + load test + smoke accuracy           |
+| **build-push**          | `.github/workflows/build-push.yml`       | push to main                                   | build → Trivy (HIGH/CRIT fail) → push GHCR               |
+| **deploy-staging**      | `.github/workflows/deploy-staging.yml`   | build-push succeeds + manual dispatch          | SSH staging; auto                                        |
+| **verify-staging**      | `.github/workflows/verify-staging.yml`   | deploy-staging succeeds + manual dispatch      | smoke + accuracy + load (parallel) + gate                |
+| **deploy-prod**         | `.github/workflows/deploy-prod.yml`      | manual dispatch only                           | Environment `production` = required reviewer             |
+| **full-eval**           | `.github/workflows/full-eval.yml`        | nightly + release tags                         | full 400-record eval; bumps baseline on release tag      |
+
+### Deploying a hotfix to prod
+
+```bash
+# 1. PR with fix, merge when green → build-push + deploy-staging fire automatically
+# 2. Wait for verify-staging green (check Actions tab)
+# 3. Trigger deploy-prod manually:
+gh workflow run deploy-prod.yml -f image_tag=sha-abc1234
+# 4. Approve when the workflow pauses at the production gate
+# 5. Watch logs — auto-rollback will kick in on smoke failure
+```
+
+### Rolling back prod right now
+
+```bash
+ssh ec2-user@$PROD_HOST 'sudo make -C /opt/invoice-ocr rollback'
+```
+
+Reads `/opt/invoice-ocr/.previous_sha`, pulls + restarts compose on that image,
+polls `/readyz`. One command, under a minute.
+
+### Inspecting a stuck job
+
+```bash
+ssh ec2-user@$PROD_HOST
+cd /opt/invoice-ocr
+make logs-worker                                    # live tail of 4 workers
+make logs | grep "$JOB_ID"                          # correlate by job_id (set in ContextVar)
+docker compose exec redis redis-cli LRANGE invoice:jobs 0 -1 | head
+```
 
 ### Accuracy gate — how to read it
 
@@ -427,26 +510,24 @@ The gate compares a new eval report against `experiments/baseline.json` on three
 1. **Absolute floor** — overall and per-field accuracy must exceed configured floors.
 2. **Relative drop** — overall/field accuracy must not drop more than `*_relative_drop_max` pp
    below the reference run.
-3. **Per-store floor** — average of seven primary fields (`name`, `date`, `total_money`,
-   `receipt_number`, `pos_id`, `cashier`, `product_name`) per store type must exceed its floor.
+3. **Per-store floor** — average of seven primary fields per store type must exceed its floor.
    Store types with fewer than 10 records are excluded.
 
 Two modes tune the strictness:
 
-- `--mode smoke` (default, PR gate): floors relaxed by −2 pp, drop tolerances × 1.5 — absorbs
-  the ~1–2 pp sampling noise of the 120-record smoke slice.
-- `--mode strict` (nightly + release): raw baseline values, no relaxation.
+- `--mode smoke` — floors relaxed by −2 pp, drop tolerances × 1.5 — absorbs the
+  ~1–2 pp sampling noise of the 120-record slice used in PR and verify-staging gates.
+- `--mode strict` — raw baseline values, used by full-eval (nightly + release).
 
 ### Bumping the baseline
 
 The baseline is manually pinned. Only bump on a deliberate release:
 
 ```bash
-# Tag the release and push — full-eval.yml will run, then commit the baseline bump
-git tag v3.8 && git push origin v3.8
+git tag v3.8 && git push origin v3.8       # full-eval.yml does the rest
 ```
 
-To bump locally against an ad-hoc eval report (e.g. for debugging):
+To bump locally against an ad-hoc eval report:
 
 ```bash
 python scripts/check_accuracy.py \
@@ -455,44 +536,42 @@ python scripts/check_accuracy.py \
     --bump-baseline
 ```
 
-New floors are set `observed_pct − 2 pp` (per field) and `observed − 3 pp` (per store), so the
-next CI run has breathing room.
+New floors are set `observed_pct − 2 pp` (per field) and `observed − 3 pp` (per store).
 
-### Running the gate locally
+### Required GitHub secrets + variables
+
+| Name                          | Type     | Used by                                                  |
+|-------------------------------|----------|----------------------------------------------------------|
+| `AWS_ACCESS_KEY_ID`           | secret   | deploy-staging, verify-staging, deploy-prod              |
+| `AWS_SECRET_ACCESS_KEY`       | secret   | deploy-staging, verify-staging, deploy-prod              |
+| `GEMINI_API_KEY_CI`           | secret   | stack-gate, verify-staging, full-eval                    |
+| `PROMPT_SEMANTIC_VERSION`     | variable | all workflows                                            |
+
+Runtime secrets (`GEMINI_API_KEY`, `POSTGRES_PASSWORD`, MinIO creds) live in **AWS SSM
+Parameter Store** at `/invoice-ocr/${ENV}/...`, not in GitHub. The EC2 instance profile
+pulls them at deploy time via `ops/pull-secrets.sh`.
+
+### First-time provisioning
 
 ```bash
-# 1) Fast path (no Docker, no Gemini)
-pre-commit install                                   # one time
-pytest tests/unit tests/integration -v               # must be green
-
-# 2) Full stack + smoke eval (costs ~$0.50 in Gemini calls)
-docker compose up -d
-bash scripts/ci_load_test.sh                         # p95<10s, p99<30s, err<1%
-python scripts/run_eval.py \
-    --input data/eval/test_set.json \
-    --max-records 120 \
-    --out eval_reports/
-python scripts/check_accuracy.py \
-    --report 'eval_reports/eval_report_*_test_*.json' \
-    --baseline experiments/baseline.json \
-    --mode smoke                                     # exit 0 = pass
-docker compose down -v
+# Once per environment
+ENV=staging bash scripts/aws/provision-vps.sh          # creates SG, key, EC2, role
+ENV=staging bash scripts/aws/seed-secrets.sh           # uploads .env.staging to SSM
+scp -i ~/.ssh/invoice-ocr-staging-key.pem \
+    scripts/aws/bootstrap-vps.sh \
+    ec2-user@$VPS:/tmp/bootstrap-vps.sh
+ssh -i ~/.ssh/invoice-ocr-staging-key.pem \
+    ec2-user@$VPS \
+    'sudo ENV=staging bash /tmp/bootstrap-vps.sh'
+# Then push to main — build-push + deploy-staging + verify-staging cascade green
 ```
 
-### Required GitHub secrets
+### What CI/CD does NOT cover (deferred)
 
-| Secret / variable      | Purpose                                                 |
-|------------------------|---------------------------------------------------------|
-| `GEMINI_API_KEY_CI`    | Rate-limited Gemini key for CI runs (secret)            |
-| `PROMPT_SEMANTIC_VERSION` | Active PSV, e.g. `v3.7` (repository variable)        |
-
-### What the gate does NOT cover (yet)
-
-- **Soak test** — load_test.py runs 3 min; long-tail memory leaks need a separate weekly workflow
-- **Chaos test** — kill-worker-mid-job regression is not automated
-- **Prompt-injection resistance** — all current input is internal retail gold
-- **Container vuln scan** — orthogonal; add Trivy when security review demands
-- **Cost/token budget alerts** — `ocr_gemini_tokens_total` is exported but not CI-gated
+- **Multi-AZ HA** — single VPS per env is intentional for early stage
+- **Soak / chaos / shadow-traffic testing**
+- **Cost/token budget alerts** — metrics exported but not gated
+- **Prompt-injection hardening** — inputs are internal retail, not public
 
 ---
 
