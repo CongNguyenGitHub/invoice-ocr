@@ -43,8 +43,7 @@ def _row_to_record(row: asyncpg.Record) -> JobRecord:
         job_id=row["job_id"],
         status=JobStatus(row["status"]),
         phash=row["phash"],
-        minio_key=row["minio_key"],
-        failed_minio_key=row["failed_minio_key"],
+        image_url=row["image_url"],
         result=result,
         error_code=row["error_code"],
         error_message=row["error_message"],
@@ -81,19 +80,18 @@ class PostgresClient:
     # ---- per-job ops ----
     @_wrap_pg_errors
     async def create_job_record(
-        self, job_id: UUID, minio_key: str, phash: str | None
+        self, job_id: UUID, image_url: str
     ) -> None:
         assert self._pool is not None
         async with self._pool.acquire() as conn:
             await conn.execute(
                 """
-                INSERT INTO jobs (job_id, status, phash, minio_key)
-                VALUES ($1, $2, $3, $4)
+                INSERT INTO jobs (job_id, status, image_url)
+                VALUES ($1, $2, $3)
                 """,
                 job_id,
                 JobStatus.PENDING.value,
-                phash,
-                minio_key,
+                image_url,
             )
 
     @_wrap_pg_errors
@@ -105,7 +103,6 @@ class PostgresClient:
         result: dict | None = None,
         error_code: str | None = None,
         error_message: str | None = None,
-        failed_minio_key: str | None = None,
         phash: str | None = None,
     ) -> None:
         sets: list[str] = ["status = $2", "updated_at = now()"]
@@ -123,10 +120,6 @@ class PostgresClient:
         if error_message is not None:
             sets.append(f"error_message = ${idx}")
             params.append(error_message)
-            idx += 1
-        if failed_minio_key is not None:
-            sets.append(f"failed_minio_key = ${idx}")
-            params.append(failed_minio_key)
             idx += 1
         if phash is not None:
             sets.append(f"phash = ${idx}")

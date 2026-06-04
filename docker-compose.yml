@@ -1,10 +1,10 @@
 services:
-  # ───────────────── Init (alembic + buckets + lifecycles) ─────────────────
+  # ───────────────── Init (alembic + readiness probes) ─────────────────
   #
   # IMAGE selection:
   #   Local dev:     leave IMAGE unset → falls back to "invoice-ocr:local",
   #                  and the build: directive rebuilds it from the local Dockerfile.
-  #   CI / deploy:   `IMAGE=ghcr.io/owner/invoice-ocr:sha-abc1234 docker compose up -d`
+  #   Deploy:        `IMAGE=ghcr.io/owner/invoice-ocr:sha-abc1234 docker compose up -d`
   #                  pulls the pinned image instead of building.
   #
   # All three Python services (init, api, worker) share the same image tag so
@@ -16,13 +16,8 @@ services:
     environment:
       POSTGRES_DSN: postgresql+asyncpg://invoice:${POSTGRES_PASSWORD:-invoice}@postgres:5432/invoice_ocr
       REDIS_URL: redis://redis:6379
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
     depends_on:
       postgres:
-        condition: service_healthy
-      minio:
         condition: service_healthy
       redis:
         condition: service_started
@@ -39,9 +34,6 @@ services:
     environment:
       POSTGRES_DSN: postgresql+asyncpg://invoice:${POSTGRES_PASSWORD:-invoice}@postgres:5432/invoice_ocr
       REDIS_URL: redis://redis:6379
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       API_METRICS_PORT: "9101"
     depends_on:
       init:
@@ -58,9 +50,6 @@ services:
     environment:
       POSTGRES_DSN: postgresql+asyncpg://invoice:${POSTGRES_PASSWORD:-invoice}@postgres:5432/invoice_ocr
       REDIS_URL: redis://redis:6379
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       TRITON_HOST: triton:8001
       WORKER_METRICS_PORT: "9102"
       WORKER_CONCURRENCY: "4"
@@ -109,23 +98,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  minio:
-    image: minio/minio:latest
-    ports:
-      - "9000:9000"
-      - "9009:9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
-
   prometheus:
     image: prom/prometheus:latest
     ports:
@@ -150,5 +122,4 @@ services:
 volumes:
   redis_data:
   postgres_data:
-  minio_data:
   grafana_data:

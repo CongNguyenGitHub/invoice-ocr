@@ -1,8 +1,8 @@
 """Worker-side Prometheus metrics.
 
-All metrics from arch §13.1 worker section are defined here and imported by
-their emission sites. Counter/Histogram/Gauge objects are created lazily so
-importing this module doesn't register duplicates under pytest reruns.
+All metrics are defined here and imported by their emission sites.
+Counter/Histogram/Gauge objects are created lazily so importing this module
+doesn't register duplicates under pytest reruns.
 """
 from __future__ import annotations
 
@@ -13,6 +13,11 @@ stage_duration_seconds = Histogram(
     "ocr_stage_duration_seconds",
     "Per-stage wall-clock latency in execute_task_lifecycle",
     ["stage"],
+)
+
+# ---- CDN download ----
+cdn_download_seconds = Histogram(
+    "ocr_cdn_download_seconds", "CDN image download latency"
 )
 
 # ---- pHash cache ----
@@ -37,15 +42,8 @@ gemini_retries_total = Counter(
 gemini_tokens_total = Counter(
     "ocr_gemini_tokens_total", "Gemini token usage", ["kind"]
 )
-extraction_store_type_total = Counter(
-    "ocr_extraction_store_type_total", "Distribution of extracted store types", ["type"]
-)
 llm_payload_bytes = Histogram(
     "ocr_llm_payload_bytes", "JPEG q85 payload size sent to Gemini"
-)
-new_field_present_total = Counter(
-    "ocr_new_field_present_total", "Strangler Stage A: new optional field populated",
-    ["field"],
 )
 
 # ---- rate limit / yield ----
@@ -68,35 +66,17 @@ token_bucket_available = Gauge(
 # ---- inflight ----
 inflight_jobs = Gauge("ocr_inflight_jobs", "Jobs currently inside execute_task_lifecycle")
 
-# ---- whitelist ----
+# ---- whitelist (frozen labels) ----
 whitelist_match_total = Counter(
     "ocr_whitelist_match_total", "Whitelist match outcomes", ["field", "tier"]
 )
-whitelist_reload_total = Counter(
-    "ocr_whitelist_reload_total", "Whitelist hot reloads", ["file"]
-)
-whitelist_reload_failed_total = Counter(
-    "ocr_whitelist_reload_failed_total", "Whitelist reload failures", ["file", "reason"]
-)
 
-# ---- postprocess ----
-postprocess_duration_seconds = Histogram(
-    "ocr_postprocess_duration_seconds", "Postprocess wall-clock per job"
-)
-
-# ---- sweeper / orphan / storage / _fail ----
+# ---- sweeper / orphan ----
 stale_jobs_recovered_total = Counter(
     "ocr_stale_jobs_recovered_total", "Stale jobs reclaimed by sweeper", ["from_status"]
 )
 orphan_jobs_total = Counter(
     "ocr_orphan_jobs_total", "Pops with no matching Postgres row"
-)
-storage_errors_total = Counter(
-    "ocr_storage_errors_total", "Storage backend errors", ["service"]
-)
-fail_side_effect_errors_total = Counter(
-    "ocr_fail_side_effect_errors_total",
-    "Per-side failure inside _fail (decision #36)", ["side"],
 )
 
 

@@ -99,18 +99,15 @@ def test_whitelist_product_no_fallback_returns_nfc_raw(tmp_path: Path) -> None:
     assert idx.match_product("xyzabcunknown") == "xyzabcunknown"
 
 
-def test_whitelist_reload_swaps_atomically(tmp_path: Path) -> None:
+def test_whitelist_index_is_frozen_at_build(tmp_path: Path) -> None:
     from src.pipeline.whitelist_index import WhitelistIndex
 
     wl_dir = _wl_dir(tmp_path, ["Old Store"], [])
     idx = WhitelistIndex.build(wl_dir)
     assert idx.match_store("old store") == "Old Store"
 
-    (tmp_path / "store_names_whitelist.json").write_text(
-        json.dumps(["New Store"]), encoding="utf-8"
-    )
-    idx.reload("store", tmp_path / "store_names_whitelist.json")
-    assert idx.match_store("new store") == "New Store"
+    # Whitelists are frozen at startup — no reload method should exist.
+    assert not hasattr(idx, "reload"), "WhitelistIndex should be frozen — no reload()"
 
 
 # -------------------- json_schema --------------------

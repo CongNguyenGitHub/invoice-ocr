@@ -1,7 +1,7 @@
 """Worker entrypoint — N async tasks consuming from one Redis queue.
 
 Started as a CMD'd container; all daemons (sweeper, rate_refresh,
-whitelist_reload, nightly_purge) run inside the same process. WORKER_CONCURRENCY
+nightly_purge) run inside the same process. WORKER_CONCURRENCY
 governs the number of concurrent in-flight jobs per process.
 """
 from __future__ import annotations
@@ -10,11 +10,11 @@ import asyncio
 import logging
 import signal
 from typing import Awaitable, Callable
+from uuid import UUID
 
 from src.config import settings
 from src.logging_config import configure_logging
 from src.pipeline.whitelist_index import WhitelistIndex
-from src.storage.minio_client import minio
 from src.storage.postgres_client import pg
 from src.storage.redis_client import redis
 from src.utils.token_bucket import TokenBucket
@@ -46,11 +46,15 @@ async def _worker_task(
 ) -> None:
     logger.info("worker_task_started", extra={"task": name})
     while not _shutdown.is_set():
-        job_id = await redis.pop_from_queue(timeout=5)
-        if job_id is None:
+        msg = await redis.pop_from_queue(timeout=5)
+        if msg is None:
             continue
         try:
-            await execute_task_lifecycle(job_id, bucket=bucket, index=index)
+            job_id = UUID(msg["job_id"])
+            image_url = msg["image_url"]
+            await execute_task_lifecycle(
+                job_id, image_url=image_url, bucket=bucket, index=index
+            )
         except Exception:  # noqa: BLE001 — defence in depth
             logger.exception("worker_task_uncaught", extra={"task": name})
     logger.info("worker_task_stopped", extra={"task": name})
@@ -61,9 +65,6 @@ async def _run() -> int:
     logger.info("worker_boot",
                 extra={"worker_id": settings.WORKER_ID,
                        "concurrency": settings.WORKER_CONCURRENCY})
-
-    # Sole worker pre-flight: read-only bucket assertion.
-    await asyncio.to_thread(minio.assert_buckets_exist)
 
     await pg.init_pool()
     await redis.init()
@@ -89,13 +90,6 @@ async def _run() -> int:
         ])
     except ImportError:
         logger.info("daemons_not_yet_implemented")
-
-    # Whitelist reloader is a thread (separate from asyncio loop)
-    try:
-        from src.worker.whitelist_reload import start_whitelist_reloader
-        start_whitelist_reloader(index, _shutdown)
-    except ImportError:
-        logger.info("whitelist_reloader_not_yet_implemented")
 
     tasks = [
         asyncio.create_task(_worker_task(f"w{i}", bucket, index))

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from src.config import settings
 from src.storage.postgres_client import pg
@@ -20,10 +20,7 @@ def _seconds_until_next_0200() -> float:
     now = datetime.now()
     target = now.replace(hour=2, minute=0, second=0, microsecond=0)
     if target <= now:
-        target = target.replace(day=now.day + 1) if now.day < 28 else target
-        # Safer: add a day via timedelta
-        from datetime import timedelta
-        target = now.replace(hour=2, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        target += timedelta(days=1)
     return max(60.0, (target - now).total_seconds())
 
 

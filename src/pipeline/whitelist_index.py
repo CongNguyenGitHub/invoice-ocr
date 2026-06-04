@@ -1,15 +1,17 @@
-"""Whitelist index with rapidfuzz bucket prefilter + atomic hot reload.
+"""Whitelist index with rapidfuzz bucket prefilter — frozen at startup.
 
 Per-worker-process singleton. Two sub-indexes (`store`, `product`) sharing the
 same internal layout. Bucket key is `(lower[:3], len(lower)//4)` with ±1
-length-bucket drift tolerance (arch §9.3).
+length-bucket drift tolerance.
+
+The index is built once at startup via `WhitelistIndex.build()` and stays
+frozen for the lifetime of the process. To update whitelists, redeploy
+the worker with new JSON files.
 """
 from __future__ import annotations
 
 import json
 import logging
-import threading
-import unicodedata
 from pathlib import Path
 
 from rapidfuzz import fuzz, process
@@ -30,6 +32,7 @@ _KIND_CUTOFFS = {
 
 
 def _normalize(raw: str) -> str:
+    import unicodedata
     return unicodedata.normalize("NFC", raw).strip()
 
 
@@ -38,9 +41,6 @@ class WhitelistIndex:
         self._buckets: dict[str, dict[tuple[str, int], list[tuple[str, str]]]] = {}
         self._all_lower: dict[str, list[str]] = {}
         self._canonical_of: dict[str, dict[str, str]] = {}
-        self.last_mtime: dict[str, float] = {}
-        self.source_path: dict[str, Path] = {}
-        self._lock = threading.Lock()
 
     @classmethod
     def build(cls, whitelist_dir: str) -> "WhitelistIndex":
@@ -48,29 +48,17 @@ class WhitelistIndex:
         for kind, fname in _KIND_FILE.items():
             path = Path(whitelist_dir) / fname
             if path.exists():
-                idx.reload(kind, path)
+                names = cls._load_one(path)
+                buckets, all_lower, canonical = cls._build_index(names)
+                idx._buckets[kind] = buckets
+                idx._all_lower[kind] = all_lower
+                idx._canonical_of[kind] = canonical
             else:
                 logger.warning("whitelist_missing", extra={"kind": kind, "path": str(path)})
-                idx._install_empty(kind, path)
+                idx._buckets[kind] = {}
+                idx._all_lower[kind] = []
+                idx._canonical_of[kind] = {}
         return idx
-
-    def reload(self, kind: str, path: Path) -> None:
-        names = self._load_one(path)
-        new_buckets, new_all_lower, new_canonical = self._build_index(names)
-        with self._lock:
-            self._buckets[kind] = new_buckets
-            self._all_lower[kind] = new_all_lower
-            self._canonical_of[kind] = new_canonical
-            self.last_mtime[kind] = path.stat().st_mtime if path.exists() else 0.0
-            self.source_path[kind] = path
-
-    def _install_empty(self, kind: str, path: Path) -> None:
-        with self._lock:
-            self._buckets[kind] = {}
-            self._all_lower[kind] = []
-            self._canonical_of[kind] = {}
-            self.last_mtime[kind] = 0.0
-            self.source_path[kind] = path
 
     @staticmethod
     def _load_one(path: Path) -> list[str]:

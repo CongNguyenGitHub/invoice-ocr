@@ -19,7 +19,6 @@ dependencies = [
     "psycopg2-binary>=2.9.0",     # alembic sync upgrade in init container
     "sqlalchemy>=2.0.0",          # alembic only — no ORM at runtime
     "alembic>=1.13.0",
-    "minio>=7.2.0",
 
     # Pipeline
     "Pillow>=10.0.0",

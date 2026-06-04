@@ -1,7 +1,7 @@
 """Exception hierarchy — see task §12.
 
 Every concrete class carries:
-  * error_code  — stable string, surfaced in Postgres + Redis ErrorPayload.
+  * error_code  — stable string, surfaced in Postgres + API error responses.
   * message     — human-readable.
   * is_permanent (class attribute) — routes to FAILED_PERMANENT vs FAILED_TRANSIENT.
 """
@@ -94,21 +94,7 @@ class TritonUnavailableError(TransientPipelineError):
 
 
 # -------------------- Storage --------------------
-class StorageError(OCRSystemError):
-    pass
-
-
-class ObjectNotFoundError(StorageError):
-    """Blob missing in MinIO — permanent (decision #34)."""
-
-    error_code = "object_not_found"
-    is_permanent = True
-
-    def __init__(self, message: str = "MinIO object not found"):
-        super().__init__(self.error_code, message)
-
-
-class StorageTransientError(StorageError):
+class StorageTransientError(OCRSystemError):
     """Network / 5xx from any storage backend."""
 
     error_code = "storage_transient"
@@ -118,7 +104,7 @@ class StorageTransientError(StorageError):
         super().__init__(self.error_code, message)
 
 
-class DatabaseUnavailable(StorageError):  # noqa: N818 — domain error name, not *Error
+class DatabaseUnavailable(OCRSystemError):  # noqa: N818 — domain error name, not *Error
     """asyncpg PostgresError — mapped via @_wrap_pg_errors decorator."""
 
     error_code = "database_unavailable"

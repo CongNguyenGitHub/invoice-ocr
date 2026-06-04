@@ -1,14 +1,12 @@
 """Stale-job sweeper. Runs every SWEEP_INTERVAL_SECONDS in every worker process.
 
-Per-row processing (invariant #12 / I13):
+Per-row processing:
   * Selects PROCESSING > 15m OR PENDING > 30m.
   * For each row, calls _fail (FAILED_TRANSIENT, error_code='stale_timeout').
-  * _fail is never-raise (decision #36) and publishes ErrorPayload — so
-    poll clients see 503 with stable code.
+  * _fail is never-raise and updates Postgres — so poll clients see 503.
 
 Multiple workers running this loop is fine: _fail is idempotent (status
-already terminal → pg update is a no-op write; move_to_failed guarded by
-failed_minio_key IS NULL).
+already terminal → pg update is a no-op write).
 """
 from __future__ import annotations
 
@@ -30,8 +28,6 @@ async def _sweep_once() -> int:
         try:
             await _fail(
                 r.job_id,
-                r.minio_key,
-                r.failed_minio_key,
                 is_permanent=False,
                 error_code="stale_timeout",
                 error_message=f"sweeper: status={r.status.value} age exceeded threshold",

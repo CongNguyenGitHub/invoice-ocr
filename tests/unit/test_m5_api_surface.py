@@ -1,43 +1,7 @@
 """M5 — light surface tests. Full lifecycle verified in integration (M5 gate)."""
 from __future__ import annotations
 
-import uuid
-
 import pytest
-
-
-def test_render_payload_success_returns_bare_invoice() -> None:
-    from src.api.routes import _render_payload
-
-    jid = uuid.uuid4()
-    resp = _render_payload(
-        jid,
-        {"job_id": str(jid), "status": "SUCCEEDED", "result": {"name": "AEON"}},
-    )
-    assert resp.status_code == 200
-    assert resp.body.decode().startswith('{"name":"AEON"')
-
-
-def test_render_payload_permanent_returns_422() -> None:
-    from src.api.routes import _render_payload
-
-    jid = uuid.uuid4()
-    resp = _render_payload(
-        jid,
-        {"job_id": str(jid), "status": "FAILED_PERMANENT", "error_code": "no_invoice_detected", "error_message": "x"},
-    )
-    assert resp.status_code == 422
-
-
-def test_render_payload_transient_returns_503() -> None:
-    from src.api.routes import _render_payload
-
-    jid = uuid.uuid4()
-    resp = _render_payload(
-        jid,
-        {"job_id": str(jid), "status": "FAILED_TRANSIENT", "error_code": "gemini_exhausted", "error_message": "x"},
-    )
-    assert resp.status_code == 503
 
 
 @pytest.mark.asyncio
@@ -86,3 +50,4 @@ def test_token_bucket_acquires_and_denies() -> None:
         assert await b.acquire() is False
 
     asyncio.run(_run())
+

@@ -1,8 +1,7 @@
 """Redis client (redis.asyncio pool). All async.
 
-Result channel is a LIST consumed via BLPOP — survives the publish-before-
-subscribe race that pub/sub would expose. TTL 90 s auto-evicts unclaimed
-results (decision #4).
+Queue messages are JSON-encoded dicts with job_id and image_url.
+pHash cache stores raw extraction results keyed by perceptual hash.
 """
 from __future__ import annotations
 
@@ -56,13 +55,19 @@ class RedisClient:
             return False
 
     # ---- queue ----
-    async def push_to_queue(self, job_id: UUID) -> None:
+    async def push_to_queue(self, job_id: UUID, image_url: str) -> None:
+        """Push an enriched JSON message to the job queue."""
+        msg = json.dumps({"job_id": str(job_id), "image_url": image_url})
         try:
-            await self._r.lpush(settings.REDIS_QUEUE_KEY, str(job_id))
+            await self._r.lpush(settings.REDIS_QUEUE_KEY, msg)
         except (RedisConnectionError, RedisTimeoutError, RedisError) as e:
             raise StorageTransientError(f"redis push_to_queue failed: {e}") from e
 
-    async def pop_from_queue(self, timeout: int = 5) -> UUID | None:
+    async def pop_from_queue(self, timeout: int = 5) -> dict | None:
+        """Pop an enriched JSON message from the job queue.
+
+        Returns dict with 'job_id' and 'image_url' keys, or None on timeout.
+        """
         try:
             res = await self._r.brpop(settings.REDIS_QUEUE_KEY, timeout=timeout)
         except (RedisConnectionError, RedisTimeoutError) as e:
@@ -74,9 +79,9 @@ class RedisClient:
             return None
         _, val = res
         try:
-            return UUID(val)
-        except ValueError:
-            logger.error("queue_bad_uuid", extra={"val": val})
+            return json.loads(val)
+        except (TypeError, ValueError):
+            logger.error("queue_bad_json", extra={"val": val})
             return None
 
     async def get_queue_depth(self) -> int:
@@ -84,47 +89,6 @@ class RedisClient:
             return int(await self._r.llen(settings.REDIS_QUEUE_KEY))
         except RedisError as e:
             raise StorageTransientError(f"redis llen failed: {e}") from e
-
-    # ---- result channel (LIST + BLPOP RPC) ----
-    async def publish_result(self, job_id: UUID, payload: dict) -> None:
-        key = settings.redis_result_key(job_id)
-        body = json.dumps(payload, default=str)
-        try:
-            async with self._r.pipeline(transaction=False) as pipe:
-                pipe.lpush(key, body)
-                pipe.expire(key, settings.REDIS_RESULT_TTL_SECONDS)
-                await pipe.execute()
-        except (RedisConnectionError, RedisTimeoutError, RedisError) as e:
-            raise StorageTransientError(f"redis publish_result failed: {e}") from e
-
-    async def wait_for_result(self, job_id: UUID, timeout: int) -> dict | None:
-        """BLPOP the per-job result LIST. Decision #38: a Redis blip during
-        BLPOP must NOT 5xx an in-flight job — log + drop, return None so the
-        API route falls through to the 504+poll branch."""
-        key = settings.redis_result_key(job_id)
-        try:
-            res = await self._r.blpop(key, timeout=timeout)
-        except (RedisConnectionError, RedisTimeoutError) as e:
-            logger.warning("wait_for_result_blip",
-                           extra={"job_id": str(job_id), "err": str(e)})
-            try:
-                # Best-effort metric — import lazily to avoid import-cycle on api.
-                from src.api.metrics import wait_redis_drops_total
-                wait_redis_drops_total.inc()
-            except Exception:  # noqa: BLE001
-                pass
-            return None
-        except RedisError as e:
-            raise StorageTransientError(f"redis blpop failed: {e}") from e
-        if not res:
-            return None
-        _, val = res
-        try:
-            return json.loads(val)
-        except (TypeError, ValueError):
-            logger.error("wait_for_result_bad_json",
-                         extra={"job_id": str(job_id), "val": val})
-            return None
 
     # ---- pHash cache (raw extraction, PSV-versioned) ----
     async def get_phash_cache(self, phash: str) -> dict | None:

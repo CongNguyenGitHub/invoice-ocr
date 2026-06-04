@@ -1,5 +1,4 @@
-"""Postprocessor — mandatory on every job (cache hits included), so whitelist
-hot reloads take effect immediately.
+"""Postprocessor — mandatory on every job (cache hits included).
 
 Whitelist index is passed in (no module-global) — keeps API import surface
 clean and makes unit tests trivial.
@@ -14,7 +13,6 @@ import re
 import unicodedata
 
 from src.schemas import InvoiceResult, Product
-from src.worker.metrics import postprocess_duration_seconds
 
 logger = logging.getLogger(__name__)
 
@@ -94,16 +92,15 @@ def _normalize_product(p: Product, index) -> Product:  # noqa: ANN001
 
 def postprocess(result: InvoiceResult, index) -> InvoiceResult:  # noqa: ANN001
     """Order matches arch §5.5."""
-    with postprocess_duration_seconds.time():
-        return InvoiceResult(
-            name=index.match_store(result.name),
-            type=(result.type.strip().lower() if result.type else ""),
-            date=_normalize_date(result.date),
-            time=_normalize_time(result.time),
-            pos_id=_normalize_unicode(result.pos_id),
-            receipt_number=_normalize_unicode(result.receipt_number),
-            cashier=_normalize_unicode(result.cashier),
-            total_money=_normalize_money(result.total_money),
-            barcode=_normalize_unicode(result.barcode),
-            products=[_normalize_product(p, index) for p in result.products],
-        )
+    return InvoiceResult(
+        name=index.match_store(result.name),
+        type=(result.type.strip().lower() if result.type else ""),
+        date=_normalize_date(result.date),
+        time=_normalize_time(result.time),
+        pos_id=_normalize_unicode(result.pos_id),
+        receipt_number=_normalize_unicode(result.receipt_number),
+        cashier=_normalize_unicode(result.cashier),
+        total_money=_normalize_money(result.total_money),
+        barcode=_normalize_unicode(result.barcode),
+        products=[_normalize_product(p, index) for p in result.products],
+    )

@@ -1,6 +1,5 @@
-"""Init container — alembic upgrade head + MinIO bucket/lifecycle setup.
+"""Init container — alembic upgrade head + readiness probes.
 
-Sole caller of `ensure_buckets_exist` + `configure_lifecycles` (decision #32).
 Exits non-zero on any failure so docker-compose's
 `depends_on: service_completed_successfully` gates api/worker correctly.
 """
@@ -12,7 +11,6 @@ import sys
 
 from src.config import settings
 from src.logging_config import configure_logging
-from src.storage.minio_client import get_minio
 from src.storage.postgres_client import get_pg
 from src.storage.redis_client import get_redis
 
@@ -38,13 +36,7 @@ async def main() -> int:
         await asyncio.to_thread(_run_alembic_upgrade)
         logger.info("init_alembic_upgrade_done")
 
-        # 2. MinIO buckets + lifecycles
-        minio = get_minio()
-        await asyncio.to_thread(minio.ensure_buckets_exist)
-        await asyncio.to_thread(minio.configure_lifecycles)
-        logger.info("init_minio_ready")
-
-        # 3. Readiness probes — catch config errors before releasing the gate
+        # 2. Readiness probes — catch config errors before releasing the gate
         pg = get_pg()
         redis = get_redis()
         await pg.init_pool()

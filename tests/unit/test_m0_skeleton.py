@@ -24,11 +24,6 @@ def test_redis_key_helpers_contain_psv() -> None:
     assert settings.PROMPT_SEMANTIC_VERSION in key
 
 
-def test_redis_result_key_format() -> None:
-    from src.config import settings
-
-    jid = uuid4()
-    assert str(jid) in settings.redis_result_key(jid)
 
 
 def test_prompt_file_path_points_into_pipeline_prompts() -> None:
@@ -59,13 +54,11 @@ def test_schema_extra_forbid() -> None:
 
 def test_error_hierarchy_exposes_error_code() -> None:
     from src.domain.errors import (
-        ObjectNotFoundError,
         OCRSystemError,
         PermanentPipelineError,
         StorageTransientError,
     )
 
-    assert ObjectNotFoundError.is_permanent is True
     assert StorageTransientError.is_permanent is False
     assert PermanentPipelineError("foo").error_code == "foo"
     assert issubclass(PermanentPipelineError, OCRSystemError)

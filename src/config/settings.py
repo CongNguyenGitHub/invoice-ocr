@@ -24,9 +24,13 @@ class Settings(BaseSettings):
     # ---------- API ----------
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
-    API_TIMEOUT_SECONDS: int = 60
     API_MAX_IMAGE_BYTES: int = 10_485_760  # 10 MB
     API_METRICS_PORT: int = 9101
+
+    # ---------- Image Download (Worker → CDN) ----------
+    IMAGE_DOWNLOAD_TIMEOUT_SECONDS: int = 30
+    IMAGE_DOWNLOAD_MAX_BYTES: int = 10_485_760  # 10 MB
+    ALLOWED_IMAGE_DOMAINS: list[str] = Field(default_factory=lambda: ["img-campaign.gotit.vn"])
 
     # ---------- Worker ----------
     WORKER_METRICS_PORT: int = 9102
@@ -35,21 +39,11 @@ class Settings(BaseSettings):
     # ---------- Redis ----------
     REDIS_URL: str = "redis://redis:6379"
     REDIS_QUEUE_KEY: str = "ocr:queue"
-    REDIS_RESULT_CHANNEL_FMT: str = "ocr:result:{job_id}"
-    REDIS_RESULT_TTL_SECONDS: int = 90
     REDIS_PHASH_TTL_SECONDS: int = 86_400
     REDIS_REQUEUE_TTL_SECONDS: int = 3_600
 
     # ---------- Postgres ----------
     POSTGRES_DSN: str = "postgresql+asyncpg://invoice:invoice@postgres:5432/invoice_ocr"
-
-    # ---------- MinIO ----------
-    MINIO_ENDPOINT: str = "minio:9000"
-    MINIO_ACCESS_KEY: str = "minioadmin"
-    MINIO_SECRET_KEY: str = "minioadmin"
-    MINIO_SECURE: bool = False
-    MINIO_BUCKET_UPLOADS: str = "invoices"
-    MINIO_BUCKET_FAILED: str = "failed-invoices"
 
     # ---------- Triton / YOLO ----------
     TRITON_HOST: str = "triton:8001"
@@ -77,7 +71,6 @@ class Settings(BaseSettings):
 
     # ---------- Whitelists ----------
     WHITELIST_DIR: str = "/app/whitelists"
-    WHITELIST_RELOAD_INTERVAL: int = 60
 
     # ---------- Sweeper ----------
     SWEEP_INTERVAL_SECONDS: int = 60
@@ -96,11 +89,6 @@ class Settings(BaseSettings):
 
     # ---------- Logging ----------
     LOG_LEVEL: str = "INFO"
-
-    # -------------------- Helpers (single source of truth) --------------------
-
-    def redis_result_key(self, job_id: UUID | str) -> str:
-        return self.REDIS_RESULT_CHANNEL_FMT.format(job_id=str(job_id))
 
     def phash_cache_key(self, phash: str) -> str:
         return f"ocr:phash:{phash}:psv:{self.PROMPT_SEMANTIC_VERSION}"

@@ -26,9 +26,6 @@ queue_soft_warn_total = Counter(
 backpressure_rejections_total = Counter(
     "ocr_backpressure_rejections_total", "HTTP 429 responses from check_backpressure"
 )
-wait_redis_drops_total = Counter(
-    "ocr_wait_redis_drops_total", "Redis blip during wait_for_result (decision #38)"
-)
 
 
 def start_metrics_server_api(port: int) -> None:
