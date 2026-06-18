@@ -59,7 +59,7 @@ class RedisClient:
         """Push an enriched JSON message to the job queue."""
         msg = json.dumps({"job_id": str(job_id), "image_url": image_url})
         try:
-            await self._r.lpush(settings.REDIS_QUEUE_KEY, msg)
+            await self._r.lpush(settings.REDIS_QUEUE_KEY, msg)  # type: ignore[misc]
         except (RedisConnectionError, RedisTimeoutError, RedisError) as e:
             raise StorageTransientError(f"redis push_to_queue failed: {e}") from e
 
@@ -69,7 +69,7 @@ class RedisClient:
         Returns dict with 'job_id' and 'image_url' keys, or None on timeout.
         """
         try:
-            res = await self._r.brpop(settings.REDIS_QUEUE_KEY, timeout=timeout)
+            res = await self._r.brpop([settings.REDIS_QUEUE_KEY], timeout=timeout)  # type: ignore[misc]
         except (RedisConnectionError, RedisTimeoutError) as e:
             logger.warning("brpop_blip", extra={"err": str(e)})
             return None
@@ -86,7 +86,7 @@ class RedisClient:
 
     async def get_queue_depth(self) -> int:
         try:
-            return int(await self._r.llen(settings.REDIS_QUEUE_KEY))
+            return int(await self._r.llen(settings.REDIS_QUEUE_KEY))  # type: ignore[misc]
         except RedisError as e:
             raise StorageTransientError(f"redis llen failed: {e}") from e
 
@@ -118,7 +118,7 @@ class RedisClient:
     async def bump_requeue_counter(self, job_id: UUID) -> int:
         key = REDIS_REQUEUE_HASH_FMT.format(job_id=job_id)
         try:
-            count = int(await self._r.hincrby(key, REDIS_REQUEUE_FIELD, 1))
+            count = int(await self._r.hincrby(key, REDIS_REQUEUE_FIELD, 1))  # type: ignore[misc]
             if count == 1:
                 await self._r.expire(key, settings.REDIS_REQUEUE_TTL_SECONDS)
         except RedisError as e:
@@ -128,7 +128,7 @@ class RedisClient:
     # ---- live rate-limit config ----
     async def read_rate_limit_config(self) -> dict[str, Any]:
         try:
-            cfg = await self._r.hgetall(REDIS_RATE_LIMIT_HASH)
+            cfg = await self._r.hgetall(REDIS_RATE_LIMIT_HASH)  # type: ignore[misc]
         except RedisError as e:
             raise StorageTransientError(f"redis hgetall rate_limit failed: {e}") from e
         if not cfg:

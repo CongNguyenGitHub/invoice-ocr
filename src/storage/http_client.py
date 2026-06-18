@@ -21,7 +21,7 @@ class ImageTooLargeError(PermanentPipelineError):
     def __init__(self, url: str, size: int) -> None:
         super().__init__(
             error_code="image_too_large",
-            detail=f"Image at {url} is {size} bytes, limit is {settings.IMAGE_DOWNLOAD_MAX_BYTES}",
+            message=f"Image at {url} is {size} bytes, limit is {settings.IMAGE_DOWNLOAD_MAX_BYTES}",
         )
 
 
@@ -31,7 +31,7 @@ class ImageDownloadError(PermanentPipelineError):
     def __init__(self, url: str, status_code: int) -> None:
         super().__init__(
             error_code="image_download_failed",
-            detail=f"HTTP {status_code} downloading {url}",
+            message=f"HTTP {status_code} downloading {url}",
         )
 
 

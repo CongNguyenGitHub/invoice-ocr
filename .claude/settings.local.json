@@ -6,7 +6,17 @@
       "Bash(grep \"^.*:\\\\s*$\")",
       "Bash(python *)",
       "Bash(ruff check *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(chmod +x *)",
+      "PowerShell(docker compose up *)",
+      "PowerShell(docker compose ps *)",
+      "Bash(git restore *)",
+      "PowerShell(curl *)",
+      "PowerShell(docker compose logs *)",
+      "Bash(git push *)",
+      "Bash(gh run *)",
+      "Bash(mypy *)"
     ]
   }
 }

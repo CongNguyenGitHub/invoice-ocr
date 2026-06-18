@@ -9,7 +9,7 @@ import logging
 import threading
 
 import numpy as np
-import tritonclient.grpc.aio as triton_grpc
+import tritonclient.grpc.aio as triton_grpc  # type: ignore[import-untyped]
 
 from src.config import settings
 from src.domain.errors import TritonUnavailableError

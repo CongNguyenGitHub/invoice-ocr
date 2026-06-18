@@ -35,9 +35,9 @@ def preprocess_image(raw: bytes) -> PreprocessResult:
     except (UnidentifiedImageError, OSError) as e:
         raise PermanentPipelineError("truncated_upload", str(e)) from e
 
-    img = ImageOps.exif_transpose(img)
+    img = ImageOps.exif_transpose(img) or img  # type: ignore[assignment]
     if img.mode != "RGB":
-        img = img.convert("RGB")
+        img = img.convert("RGB")  # type: ignore[assignment]
 
     if max(img.size) > settings.MAX_IMAGE_DIMENSION:
         img.thumbnail(

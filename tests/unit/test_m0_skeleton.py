@@ -3,8 +3,6 @@ No network, no Docker — runs under plain `pytest -q`.
 """
 from __future__ import annotations
 
-from uuid import uuid4
-
 import pytest
 
 

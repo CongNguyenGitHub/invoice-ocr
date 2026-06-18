@@ -12,7 +12,7 @@ from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
-import asyncpg
+import asyncpg  # type: ignore[import-untyped]
 
 from src.config import settings
 from src.domain.constants import JobStatus
