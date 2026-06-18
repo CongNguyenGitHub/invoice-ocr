@@ -54,7 +54,12 @@ jobs:
           # Deploy via SSH
           ssh -i ~/.ssh/deploy_key ubuntu@$PRODUCTION_HOST << EOF
             set -e
+            echo "✓ SSH connection successful"
+            echo "Current directory: \$(pwd)"
+            echo "User: \$(whoami)"
+
             cd /opt/invoice-ocr
+            echo "✓ Changed to /opt/invoice-ocr"
 
             # Pull latest code
             git pull origin main
@@ -69,21 +74,21 @@ jobs:
             # Rolling restart
             docker compose up -d
 
-            # Wait for containers to start (initial grace period)
-            echo "Waiting for containers to initialize..."
-            sleep 30
+            # Wait for containers to start (10 minute grace period)
+            echo "Waiting 10 minutes for containers to fully initialize..."
+            sleep 600
 
             # Health check with retries
             echo "Starting health checks..."
-            for i in {1..18}; do
+            for i in {1..6}; do
               if curl -sf http://localhost:8000/healthz > /dev/null 2>&1; then
-                echo "✓ Deployment successful (ready after $((30 + i*10)) seconds)"
+                echo "✓ Deployment successful (ready after $((600 + i*10)) seconds)"
                 exit 0
               fi
-              echo "Health check attempt $i/18..."
+              echo "Health check attempt $i/6..."
               sleep 10
             done
-            echo "✗ Health check failed after 3.5 minutes"
+            echo "✗ Health check failed after 11 minutes"
             docker compose ps
             docker compose logs api --tail 20
             exit 1
