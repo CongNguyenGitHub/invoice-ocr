@@ -52,15 +52,18 @@ jobs:
           ssh-keyscan -H $PRODUCTION_HOST >> ~/.ssh/known_hosts
 
           # Deploy via SSH
-          ssh -i ~/.ssh/deploy_key ubuntu@$PRODUCTION_HOST << 'EOF'
+          ssh -i ~/.ssh/deploy_key ubuntu@$PRODUCTION_HOST << EOF
             set -e
             cd /opt/invoice-ocr
 
+            # Pull latest code
+            git pull origin main
+
             # Set image tag
-            export IMAGE=${{ steps.build-image.outputs.image }}
+            export IMAGE=$ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
 
             # Pull new image
-            aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
             docker compose pull
 
             # Rolling restart
