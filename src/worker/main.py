@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import signal
-from typing import Awaitable, Callable
+from typing import Any, Callable, Coroutine
 from uuid import UUID
 
 from src.config import settings
@@ -74,8 +74,8 @@ async def _run() -> int:
     loop = asyncio.get_running_loop()
     _install_signal_handlers(loop)
 
-    # Daemons (registered in M6 — keep registration here)
-    daemons: list[Callable[[], Awaitable[None]]] = []
+    # Properly typed daemon collection returning Coroutines for asyncio compatibility
+    daemons: list[Callable[[], Coroutine[Any, Any, None]]] = []
     try:
         from src.worker.nightly_purge import nightly_purge_loop
         from src.worker.rate_refresh import rate_refresh_loop
@@ -92,9 +92,11 @@ async def _run() -> int:
         logger.info("daemons_not_yet_implemented")
 
     tasks = [asyncio.create_task(_worker_task(f"w{i}", bucket, index)) for i in range(settings.WORKER_CONCURRENCY)]
+    
+    # Fully compliant with asyncio.create_task type expectations
     daemon_tasks: list[asyncio.Task[None]] = [
         asyncio.create_task(d())
-        for d in daemons  # type: ignore[arg-type]
+        for d in daemons
     ]
 
     await _shutdown.wait()
