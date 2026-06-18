@@ -49,10 +49,10 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H $PRODUCTION_HOST >> ~/.ssh/known_hosts
+          ssh-keyscan -H -T 30 "$PRODUCTION_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
           # Deploy via SSH
-          ssh -i ~/.ssh/deploy_key ubuntu@$PRODUCTION_HOST << EOF
+          ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -i ~/.ssh/deploy_key ubuntu@$PRODUCTION_HOST << EOF
             set -e
             echo "✓ SSH connection successful"
             echo "Current directory: \$(pwd)"
