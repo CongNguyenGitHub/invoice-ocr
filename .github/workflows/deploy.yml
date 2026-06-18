@@ -69,16 +69,18 @@ jobs:
             # Rolling restart
             docker compose up -d
 
-            # Health check
+            # Health check with retries
             echo "Waiting for services to start..."
-            sleep 15
-
-            if curl -f http://localhost:8000/healthz; then
-              echo "✓ Deployment successful"
-            else
-              echo "✗ Health check failed"
-              exit 1
-            fi
+            for i in {1..12}; do
+              sleep 10
+              if curl -sf http://localhost:8000/healthz; then
+                echo "✓ Deployment successful (attempt $i)"
+                exit 0
+              fi
+              echo "Attempt $i failed, retrying..."
+            done
+            echo "✗ Health check failed after 2 minutes"
+            exit 1
           EOF
 
       - name: Notify deployment status
