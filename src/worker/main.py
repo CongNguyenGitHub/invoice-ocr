@@ -92,9 +92,10 @@ async def _run() -> int:
         logger.info("daemons_not_yet_implemented")
 
     tasks = [asyncio.create_task(_worker_task(f"w{i}", bucket, index)) for i in range(settings.WORKER_CONCURRENCY)]
-
-    # Fully compliant with asyncio.create_task type expectations
-    daemon_tasks: list[asyncio.Task[None]] = [asyncio.create_task(d()) for d in daemons]
+    daemon_tasks: list[asyncio.Task[None]] = [
+        asyncio.create_task(d())
+        for d in daemons  # type: ignore[arg-type]
+    ]
 
     await _shutdown.wait()
     logger.info("worker_draining")
