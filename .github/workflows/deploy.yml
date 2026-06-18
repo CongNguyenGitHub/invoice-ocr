@@ -49,10 +49,26 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H $PRODUCTION_HOST >> ~/.ssh/known_hosts
+          SSH_SCAN_RETRIES=6
+          SSH_SCAN_TIMEOUT=10
+          SSH_SCAN_BACKOFF=5
+          touch ~/.ssh/known_hosts
+          for ((i=1; i<=SSH_SCAN_RETRIES; i++)); do
+            SCANNED_KEYS=$(ssh-keyscan -H -T "$SSH_SCAN_TIMEOUT" "$PRODUCTION_HOST" || true)
+            if [ -n "$SCANNED_KEYS" ]; then
+              printf '%s\n' "$SCANNED_KEYS" >> ~/.ssh/known_hosts
+              break
+            fi
+            echo "ssh-keyscan attempt $i/$SSH_SCAN_RETRIES failed, retrying in ${SSH_SCAN_BACKOFF}s..."
+            sleep "$SSH_SCAN_BACKOFF"
+          done
+          if ! ssh-keygen -F "$PRODUCTION_HOST" -f ~/.ssh/known_hosts > /dev/null; then
+            echo "Failed to verify SSH host key for $PRODUCTION_HOST after $SSH_SCAN_RETRIES attempts. Check DNS, network path, and firewall rules (TCP/22)."
+            exit 1
+          fi
 
           # Deploy via SSH
-          ssh -i ~/.ssh/deploy_key ubuntu@$PRODUCTION_HOST << EOF
+          ssh -o StrictHostKeyChecking=yes -o ConnectTimeout=30 -i ~/.ssh/deploy_key ubuntu@$PRODUCTION_HOST << EOF
             set -e
             echo "✓ SSH connection successful"
             echo "Current directory: \$(pwd)"
