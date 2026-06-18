@@ -51,8 +51,9 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$PRODUCTION_HOST" >> ~/.ssh/known_hosts
 
-          # Deploy via SSH
-          ssh -o StrictHostKeyChecking=yes -o ConnectTimeout=10 -i ~/.ssh/deploy_key ubuntu@$PRODUCTION_HOST << 'EOF'
+          # Deploy via SSH (pass environment variables)
+          ssh -o StrictHostKeyChecking=yes -o ConnectTimeout=10 -i ~/.ssh/deploy_key ubuntu@$PRODUCTION_HOST \
+            "bash -s" << EOF
             set -e
             echo "✓ SSH connection successful"
 
@@ -80,10 +81,10 @@ jobs:
             echo "Starting health checks..."
             for i in {1..12}; do
               if curl -sf http://localhost:8000/healthz > /dev/null 2>&1; then
-                echo "✓ Deployment successful (ready after $((30 + i*10)) seconds)"
+                echo "✓ Deployment successful (ready after \$((30 + i*10)) seconds)"
                 exit 0
               fi
-              echo "Health check attempt $i/12..."
+              echo "Health check attempt \$i/12..."
               sleep 10
             done
             echo "✗ Health check failed after 2.5 minutes"
