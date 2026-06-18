@@ -3,6 +3,7 @@
 Every method is wrapped via @_wrap_pg_errors → asyncpg.PostgresError mapped
 to DatabaseUnavailable so the worker except-tuple is meaningful.
 """
+
 from __future__ import annotations
 
 import functools
@@ -79,9 +80,7 @@ class PostgresClient:
 
     # ---- per-job ops ----
     @_wrap_pg_errors
-    async def create_job_record(
-        self, job_id: UUID, image_url: str
-    ) -> None:
+    async def create_job_record(self, job_id: UUID, image_url: str) -> None:
         assert self._pool is not None
         async with self._pool.acquire() as conn:
             await conn.execute(
@@ -136,9 +135,7 @@ class PostgresClient:
         """Decision #35 — keeps live-but-throttled jobs out of the sweeper window."""
         assert self._pool is not None
         async with self._pool.acquire() as conn:
-            await conn.execute(
-                "UPDATE jobs SET updated_at = now() WHERE job_id = $1", job_id
-            )
+            await conn.execute("UPDATE jobs SET updated_at = now() WHERE job_id = $1", job_id)
 
     @_wrap_pg_errors
     async def get_job_record(self, job_id: UUID) -> JobRecord | None:

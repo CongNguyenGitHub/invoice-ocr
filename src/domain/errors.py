@@ -5,6 +5,7 @@ Every concrete class carries:
   * message     — human-readable.
   * is_permanent (class attribute) — routes to FAILED_PERMANENT vs FAILED_TRANSIENT.
 """
+
 from __future__ import annotations
 
 

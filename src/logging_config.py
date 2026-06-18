@@ -3,6 +3,7 @@
 Every log record carries service, worker_id, and the current job_id contextvar
 (when set) via the ContextFilter. stdout only — container runtime captures.
 """
+
 from __future__ import annotations
 
 import logging
@@ -42,15 +43,13 @@ def configure_logging(service: str) -> None:
     handler = logging.StreamHandler(sys.stdout)
     if jsonlogger is not None:
         fmt = jsonlogger.JsonFormatter(
-            "%(asctime)s %(levelname)s %(service)s %(worker_id)s %(job_id)s "
-            "%(name)s %(message)s",
+            "%(asctime)s %(levelname)s %(service)s %(worker_id)s %(job_id)s %(name)s %(message)s",
             rename_fields={"asctime": "ts", "levelname": "level"},
             timestamp=True,
         )
     else:  # pragma: no cover
         fmt = logging.Formatter(
-            "%(asctime)s %(levelname)s %(service)s %(worker_id)s "
-            "job_id=%(job_id)s %(name)s: %(message)s"
+            "%(asctime)s %(levelname)s %(service)s %(worker_id)s job_id=%(job_id)s %(name)s: %(message)s"
         )
     handler.setFormatter(fmt)
     handler.addFilter(ContextFilter(service))

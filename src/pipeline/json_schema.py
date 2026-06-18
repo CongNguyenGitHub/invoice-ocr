@@ -6,6 +6,7 @@ enforced client-side by Pydantic `extra="forbid"` on InvoiceResult/Product,
 which surfaces drift as ValidationError → PermanentPipelineError(
 "extractor_invalid_json").
 """
+
 from __future__ import annotations
 
 _PRODUCT_SCHEMA = {

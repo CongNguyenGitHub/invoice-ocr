@@ -8,6 +8,7 @@ Per-row processing:
 Multiple workers running this loop is fine: _fail is idempotent (status
 already terminal → pg update is a no-op write).
 """
+
 from __future__ import annotations
 
 import asyncio

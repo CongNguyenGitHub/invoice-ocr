@@ -11,6 +11,7 @@ Retry semantics:
 
 Per-call timeout = settings.GEMINI_TIMEOUT_SECONDS (default 15 s).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -64,9 +65,7 @@ def _get_client() -> Any:
         with _init_lock:
             if _client is None:
                 if not settings.GEMINI_API_KEY:
-                    raise PermanentPipelineError(
-                        "gemini_api_key_missing", "GEMINI_API_KEY env var is empty"
-                    )
+                    raise PermanentPipelineError("gemini_api_key_missing", "GEMINI_API_KEY env var is empty")
                 from google import genai
 
                 _client = genai.Client(api_key=settings.GEMINI_API_KEY)
@@ -115,12 +114,8 @@ async def extract_invoice(crop: Image.Image) -> InvoiceResult:
             try:
                 usage = getattr(response, "usage_metadata", None)
                 if usage is not None:
-                    gemini_tokens_total.labels(kind="prompt").inc(
-                        getattr(usage, "prompt_token_count", 0) or 0
-                    )
-                    gemini_tokens_total.labels(kind="candidates").inc(
-                        getattr(usage, "candidates_token_count", 0) or 0
-                    )
+                    gemini_tokens_total.labels(kind="prompt").inc(getattr(usage, "prompt_token_count", 0) or 0)
+                    gemini_tokens_total.labels(kind="candidates").inc(getattr(usage, "candidates_token_count", 0) or 0)
             except Exception:  # noqa: BLE001
                 pass
 
@@ -128,21 +123,15 @@ async def extract_invoice(crop: Image.Image) -> InvoiceResult:
             try:
                 return InvoiceResult.model_validate_json(text)
             except ValidationError as ve:
-                raise PermanentPipelineError(
-                    "extractor_invalid_json", f"schema validation failed: {ve}"
-                ) from ve
+                raise PermanentPipelineError("extractor_invalid_json", f"schema validation failed: {ve}") from ve
 
         except genai_errors.ClientError as e:
             status = getattr(e, "status_code", None) or getattr(e, "code", None)
             if status == 429:
                 gemini_retries_total.labels(attempt="rate_limited").inc()
-                raise RateLimitedLocallyError(
-                    "gemini_rate_limited", "Gemini returned 429"
-                ) from e
+                raise RateLimitedLocallyError("gemini_rate_limited", "Gemini returned 429") from e
             # Other 4xx → permanent
-            raise PermanentPipelineError(
-                "gemini_client_error", f"{status}: {e}"
-            ) from e
+            raise PermanentPipelineError("gemini_client_error", f"{status}: {e}") from e
 
         except (genai_errors.ServerError, asyncio.TimeoutError) as e:
             last_exc = e

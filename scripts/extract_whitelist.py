@@ -21,6 +21,7 @@ Usage
         --product-out whitelists/product_names_whitelist.json \\
         --status-filter verified_ok corrected
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,17 +39,17 @@ def nfc(s: str) -> str:
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--input",       default="label_verified.json",
-                    help="Source label file (default: label_verified.json)")
-    ap.add_argument("--store-out",   default="whitelists/store_names_whitelist.json")
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--input", default="label_verified.json", help="Source label file (default: label_verified.json)")
+    ap.add_argument("--store-out", default="whitelists/store_names_whitelist.json")
     ap.add_argument("--product-out", default="whitelists/product_names_whitelist.json")
-    ap.add_argument("--status-filter", nargs="+",
-                    default=["verified_ok", "corrected"],
-                    help="Only include records with these _verify_status values")
-    ap.add_argument("--include-all", action="store_true",
-                    help="Ignore _verify_status filter (include every record)")
+    ap.add_argument(
+        "--status-filter",
+        nargs="+",
+        default=["verified_ok", "corrected"],
+        help="Only include records with these _verify_status values",
+    )
+    ap.add_argument("--include-all", action="store_true", help="Ignore _verify_status filter (include every record)")
     args = ap.parse_args()
 
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
@@ -65,8 +66,7 @@ def main() -> int:
     if args.include_all:
         usable = records
     else:
-        usable = [r for r in records
-                  if r.get("_verify_status") in allowed_statuses]
+        usable = [r for r in records if r.get("_verify_status") in allowed_statuses]
 
     print(f"Total records  : {len(records)}")
     print(f"Status filter  : {sorted(allowed_statuses)}")
@@ -95,12 +95,12 @@ def main() -> int:
                 prod_by_type[t] += 1
 
     # Sort
-    store_list   = sorted(store_names)
+    store_list = sorted(store_names)
     product_list = sorted(product_names)
 
     # Write
     for path_str, data in [
-        (args.store_out,   store_list),
+        (args.store_out, store_list),
         (args.product_out, product_list),
     ]:
         p = Path(path_str)

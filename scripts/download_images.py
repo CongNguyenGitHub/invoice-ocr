@@ -22,8 +22,8 @@ import httpx
 def download_one(url: str, output_dir: Path) -> tuple[str, bool, str]:
     """Download a single image. Returns (url, success, message)."""
     filename = url.split("/")[-1]
-    if not filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
-        filename += '.jpg'
+    if not filename.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+        filename += ".jpg"
     output_path = output_dir / filename
 
     if output_path.exists():
@@ -47,7 +47,7 @@ def main():
     args = parser.parse_args()
 
     # Load labels
-    with open(args.input, 'r', encoding='utf-8') as f:
+    with open(args.input, "r", encoding="utf-8") as f:
         labels = json.load(f)
 
     urls = [r["file"] for r in labels if r.get("file")]
@@ -75,7 +75,7 @@ def main():
                 print(f"  FAILED: {url[-50:]} — {msg}")
 
             if (i + 1) % 100 == 0:
-                print(f"  Progress: {i+1}/{len(urls)} (new={success}, cached={cached}, failed={failed})")
+                print(f"  Progress: {i + 1}/{len(urls)} (new={success}, cached={cached}, failed={failed})")
 
     print(f"\nDone! Downloaded={success}, Cached={cached}, Failed={failed}")
     print(f"Images saved to: {output_dir}")

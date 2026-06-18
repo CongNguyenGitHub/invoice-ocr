@@ -1,4 +1,5 @@
 """M3 — detector unit tests (Triton mocked)."""
+
 from __future__ import annotations
 
 import numpy as np

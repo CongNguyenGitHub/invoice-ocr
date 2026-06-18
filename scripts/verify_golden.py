@@ -1,4 +1,5 @@
 """Quick sanity check on the final golden_clean.json."""
+
 import json
 import sys
 from collections import Counter
@@ -15,12 +16,15 @@ print(f"Total golden records: {len(data)}")
 # Check all known error patterns are gone
 checks = {
     "mid-? in product_name": sum(
-        1 for inv in data for p in inv.get("products", [])
+        1
+        for inv in data
+        for p in inv.get("products", [])
         for pn in [p.get("product_name", "")]
         if any(
-            c == "?" and (
-                (i > 0 and (pn[i-1].isalpha() or pn[i-1].isdigit())) or
-                (i < len(pn)-1 and (pn[i+1].isalpha() or pn[i+1].isdigit()))
+            c == "?"
+            and (
+                (i > 0 and (pn[i - 1].isalpha() or pn[i - 1].isdigit()))
+                or (i < len(pn) - 1 and (pn[i + 1].isalpha() or pn[i + 1].isdigit()))
             )
             for i, c in enumerate(pn)
         )

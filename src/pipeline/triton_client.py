@@ -3,6 +3,7 @@
 Triton owns YOLO concurrency (invariant I14): we never serialize calls here;
 many concurrent `infer()` callers feed the dynamic batcher on the server side.
 """
+
 from __future__ import annotations
 
 import logging

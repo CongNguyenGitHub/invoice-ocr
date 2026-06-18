@@ -1,6 +1,7 @@
 """M0 smoke test — verifies the tree imports and settings helpers work.
 No network, no Docker — runs under plain `pytest -q`.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -20,8 +21,6 @@ def test_redis_key_helpers_contain_psv() -> None:
     key = settings.phash_cache_key("deadbeef")
     assert "psv:" in key
     assert settings.PROMPT_SEMANTIC_VERSION in key
-
-
 
 
 def test_prompt_file_path_points_into_pipeline_prompts() -> None:

@@ -4,6 +4,7 @@ Started as a CMD'd container; all daemons (sweeper, rate_refresh,
 nightly_purge) run inside the same process. WORKER_CONCURRENCY
 governs the number of concurrent in-flight jobs per process.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -52,9 +53,7 @@ async def _worker_task(
         try:
             job_id = UUID(msg["job_id"])
             image_url = msg["image_url"]
-            await execute_task_lifecycle(
-                job_id, image_url=image_url, bucket=bucket, index=index
-            )
+            await execute_task_lifecycle(job_id, image_url=image_url, bucket=bucket, index=index)
         except Exception:  # noqa: BLE001 — defence in depth
             logger.exception("worker_task_uncaught", extra={"task": name})
     logger.info("worker_task_stopped", extra={"task": name})
@@ -62,9 +61,7 @@ async def _worker_task(
 
 async def _run() -> int:
     configure_logging("worker")
-    logger.info("worker_boot",
-                extra={"worker_id": settings.WORKER_ID,
-                       "concurrency": settings.WORKER_CONCURRENCY})
+    logger.info("worker_boot", extra={"worker_id": settings.WORKER_ID, "concurrency": settings.WORKER_CONCURRENCY})
 
     await pg.init_pool()
     await redis.init()
@@ -83,20 +80,21 @@ async def _run() -> int:
         from src.worker.nightly_purge import nightly_purge_loop
         from src.worker.rate_refresh import rate_refresh_loop
         from src.worker.sweeper import sweeper_loop
-        daemons.extend([
-            lambda: sweeper_loop(_shutdown),
-            lambda: rate_refresh_loop(_shutdown, bucket),
-            lambda: nightly_purge_loop(_shutdown),
-        ])
+
+        daemons.extend(
+            [
+                lambda: sweeper_loop(_shutdown),
+                lambda: rate_refresh_loop(_shutdown, bucket),
+                lambda: nightly_purge_loop(_shutdown),
+            ]
+        )
     except ImportError:
         logger.info("daemons_not_yet_implemented")
 
-    tasks = [
-        asyncio.create_task(_worker_task(f"w{i}", bucket, index))
-        for i in range(settings.WORKER_CONCURRENCY)
-    ]
+    tasks = [asyncio.create_task(_worker_task(f"w{i}", bucket, index)) for i in range(settings.WORKER_CONCURRENCY)]
     daemon_tasks: list[asyncio.Task[None]] = [
-        asyncio.create_task(d()) for d in daemons  # type: ignore[arg-type]
+        asyncio.create_task(d())
+        for d in daemons  # type: ignore[arg-type]
     ]
 
     await _shutdown.wait()

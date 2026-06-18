@@ -3,6 +3,7 @@
 Used by the worker to fetch invoice images from pre-existing CDN URLs
 (e.g. img-campaign.gotit.vn) instead of MinIO/S3.
 """
+
 from __future__ import annotations
 
 import logging
@@ -48,9 +49,7 @@ async def download_image(url: str) -> bytes:
             resp = await client.get(url)
 
             if resp.status_code >= 500:
-                raise StorageTransientError(
-                    f"CDN returned {resp.status_code} for {url}"
-                )
+                raise StorageTransientError(f"CDN returned {resp.status_code} for {url}")
 
             if resp.status_code >= 400:
                 raise ImageDownloadError(url, resp.status_code)

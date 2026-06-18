@@ -4,6 +4,7 @@ Single source of truth for every environment variable. No other module may read
 os.environ directly. Helper methods on this class are the only place where
 Redis/prompt key formats are computed.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -99,12 +100,7 @@ class Settings(BaseSettings):
     def prompt_file_path(self) -> Path:
         # src/config/settings.py → parent.parent == src/
         # prompts live at src/pipeline/prompts/{PSV}.txt
-        return (
-            Path(__file__).parent.parent
-            / "pipeline"
-            / "prompts"
-            / f"{self.PROMPT_SEMANTIC_VERSION}.txt"
-        )
+        return Path(__file__).parent.parent / "pipeline" / "prompts" / f"{self.PROMPT_SEMANTIC_VERSION}.txt"
 
 
 settings = Settings()

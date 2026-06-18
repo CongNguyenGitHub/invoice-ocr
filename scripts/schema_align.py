@@ -3,6 +3,7 @@ schema_align.py — Align the dataset with the schema defined in src.schemas.inv
 It will project out any extra fields not defined in the schema to ensure our ground truth directly
 matches what the A/B evaluation expects.
 """
+
 import argparse
 import json
 import sys
@@ -24,26 +25,26 @@ def main(src: str, out: str):
 
     invoice_schema_fields = InvoiceResult.model_fields.keys()
     # To get the product schema fields we need to inspect the inner type
-    product_schema_fields = InvoiceResult.model_fields['products'].annotation.__args__[0].model_fields.keys()
+    product_schema_fields = InvoiceResult.model_fields["products"].annotation.__args__[0].model_fields.keys()
 
     for item in data:
         # Keep only fields that exist in InvoiceResult
         aligned_item = {k: v for k, v in item.items() if k in invoice_schema_fields}
 
         # Explicitly keep the 'file' field for A/B testing image URLs
-        if 'file' in item:
-            aligned_item['file'] = item['file']
+        if "file" in item:
+            aligned_item["file"] = item["file"]
 
         # Handle the products list
-        if 'products' in aligned_item:
+        if "products" in aligned_item:
             aligned_products = []
-            for prod in aligned_item['products']:
+            for prod in aligned_item["products"]:
                 if isinstance(prod, dict):
                     aligned_prod = {k: v for k, v in prod.items() if k in product_schema_fields}
                     aligned_products.append(aligned_prod)
                 else:
                     aligned_products.append(prod)
-            aligned_item['products'] = aligned_products
+            aligned_item["products"] = aligned_products
 
         aligned_data.append(aligned_item)
 
@@ -51,7 +52,7 @@ def main(src: str, out: str):
     for i, item in enumerate(aligned_data):
         try:
             # Create a copy without 'file' to test Pydantic validation (which forbids extra fields)
-            test_item = {k: v for k, v in item.items() if k != 'file'}
+            test_item = {k: v for k, v in item.items() if k != "file"}
             InvoiceResult(**test_item)
         except Exception as e:
             print(f"Validation failed for record {i}: {e}")

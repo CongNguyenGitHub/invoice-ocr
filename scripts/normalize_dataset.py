@@ -5,6 +5,7 @@ Applies constraints like:
  - Lowercases all text
  - Normalizes whitespace (removes leading/trailing, merges multiple spaces)
 """
+
 import argparse
 import json
 import re
@@ -14,11 +15,11 @@ import unicodedata
 def remove_accents(input_str: str) -> str:
     """Removes combining diacritical marks and handles special Vietnamese chars."""
     # Normalize to NFD (decomposition) which separates characters from their diacritics
-    nfd_form = unicodedata.normalize('NFD', input_str)
+    nfd_form = unicodedata.normalize("NFD", input_str)
     # Remove combining characters (diacritics)
-    only_ascii = ''.join([c for c in nfd_form if not unicodedata.combining(c)])
+    only_ascii = "".join([c for c in nfd_form if not unicodedata.combining(c)])
     # We also need to handle 'đ' and 'Đ' manually as they are not decomposed by NFD
-    return only_ascii.replace('đ', 'd').replace('Đ', 'd').replace('Ð', 'd') # Ð is some variant
+    return only_ascii.replace("đ", "d").replace("Đ", "d").replace("Ð", "d")  # Ð is some variant
 
 
 def normalize_text(text: str) -> str:
@@ -29,7 +30,7 @@ def normalize_text(text: str) -> str:
     # Lowercase
     text = text.lower()
     # Normalize spaces
-    text = re.sub(r'\s+', ' ', text).strip()
+    text = re.sub(r"\s+", " ", text).strip()
     return text
 
 
@@ -39,7 +40,7 @@ def normalize_record(rec: dict) -> dict:
     for k, v in rec.items():
         # Do not normalize specific keys that might be sensitive, though usually fine.
         # e.g., 'type', 'file' we can leave intact or just normalize everything.
-        if k in ('file', 'type'):
+        if k in ("file", "type"):
             norm_rec[k] = v
             continue
 

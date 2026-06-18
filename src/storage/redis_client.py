@@ -3,6 +3,7 @@
 Queue messages are JSON-encoded dicts with job_id and image_url.
 pHash cache stores raw extraction results keyed by perceptual hash.
 """
+
 from __future__ import annotations
 
 import json
@@ -108,7 +109,8 @@ class RedisClient:
         key = settings.phash_cache_key(phash)
         try:
             await self._r.setex(
-                key, settings.REDIS_PHASH_TTL_SECONDS,
+                key,
+                settings.REDIS_PHASH_TTL_SECONDS,
                 json.dumps(raw_payload, default=str),
             )
         except RedisError as e:

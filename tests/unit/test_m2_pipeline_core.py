@@ -1,4 +1,5 @@
 """M2 — pipeline core unit tests (no network)."""
+
 from __future__ import annotations
 
 import io

@@ -12,6 +12,7 @@ Invariants enforced here:
   * I12 orphans dropped: rows past requeue cap → _orphan + FAILED_PERMANENT.
   * I18 yield touches updated_at: keeps live-but-throttled jobs out of the sweeper.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -73,12 +74,19 @@ async def _fail(
 
     try:
         await pg.update_job_status(
-            job_id, status, error_code=error_code, error_message=error_message,
+            job_id,
+            status,
+            error_code=error_code,
+            error_message=error_message,
         )
     except Exception as e:  # noqa: BLE001
-        logger.exception("fail_pg_update", extra={
-            "job_id": str(job_id), "err": str(e),
-        })
+        logger.exception(
+            "fail_pg_update",
+            extra={
+                "job_id": str(job_id),
+                "err": str(e),
+            },
+        )
 
 
 async def _yield_to_queue(job_id: UUID, image_url: str) -> None:
@@ -123,11 +131,8 @@ async def execute_task_lifecycle(
             logger.warning("job_not_in_pg", extra={"job_id": str(job_id)})
             return  # silently drop — nothing to publish to
 
-        if record.status in (
-            JobStatus.SUCCEEDED, JobStatus.FAILED_PERMANENT, JobStatus.FAILED_TRANSIENT
-        ):
-            logger.info("job_already_terminal",
-                        extra={"job_id": str(job_id), "status": record.status.value})
+        if record.status in (JobStatus.SUCCEEDED, JobStatus.FAILED_PERMANENT, JobStatus.FAILED_TRANSIENT):
+            logger.info("job_already_terminal", extra={"job_id": str(job_id), "status": record.status.value})
             return  # already terminal — drop
 
         # 1. Mark PROCESSING
@@ -142,8 +147,7 @@ async def execute_task_lifecycle(
             with stage_duration_seconds.labels(stage="download").time():
                 raw = await http_client.download_image(image_url)
         except PermanentPipelineError as e:
-            await _fail(job_id,
-                        is_permanent=True, error_code=e.error_code, error_message=str(e))
+            await _fail(job_id, is_permanent=True, error_code=e.error_code, error_message=str(e))
             return
         except StorageTransientError:
             count = await _bump_or_orphan(job_id, image_url)
@@ -157,8 +161,7 @@ async def execute_task_lifecycle(
             with stage_duration_seconds.labels(stage="preprocess").time():
                 pp = preprocess_image(raw)
         except PermanentPipelineError as e:
-            await _fail(job_id,
-                        is_permanent=True, error_code=e.error_code, error_message=str(e))
+            await _fail(job_id, is_permanent=True, error_code=e.error_code, error_message=str(e))
             return
 
         phash = pp.phash
@@ -191,8 +194,7 @@ async def execute_task_lifecycle(
                 with stage_duration_seconds.labels(stage="detect").time():
                     crop = await detect_invoice(pp.pil)
             except PermanentPipelineError as e:
-                await _fail(job_id,
-                            is_permanent=True, error_code=e.error_code, error_message=str(e))
+                await _fail(job_id, is_permanent=True, error_code=e.error_code, error_message=str(e))
                 return
             except TritonUnavailableError:
                 count = await _bump_or_orphan(job_id, image_url)
@@ -220,8 +222,7 @@ async def execute_task_lifecycle(
                 await _yield_to_queue(job_id, image_url)
                 return
             except PermanentPipelineError as e:
-                await _fail(job_id,
-                            is_permanent=True, error_code=e.error_code, error_message=str(e))
+                await _fail(job_id, is_permanent=True, error_code=e.error_code, error_message=str(e))
                 return
 
             # 8. Cache RAW (pre-postprocess) — I5
@@ -239,7 +240,9 @@ async def execute_task_lifecycle(
         # 10. Persist result
         try:
             await pg.update_job_status(
-                job_id, JobStatus.SUCCEEDED, result=final.model_dump(),
+                job_id,
+                JobStatus.SUCCEEDED,
+                result=final.model_dump(),
             )
         except DatabaseUnavailable:
             # Couldn't persist — yield and retry.
@@ -255,9 +258,13 @@ async def execute_task_lifecycle(
             error_message=str(e),
         )
     except Exception as e:  # noqa: BLE001 — last-ditch
-        logger.exception("lifecycle_uncaught", extra={
-            "job_id": str(job_id), "err": str(e),
-        })
+        logger.exception(
+            "lifecycle_uncaught",
+            extra={
+                "job_id": str(job_id),
+                "err": str(e),
+            },
+        )
         with contextlib.suppress(Exception):
             await _fail(
                 job_id,
@@ -271,7 +278,8 @@ async def execute_task_lifecycle(
 
 
 async def _bump_or_orphan(
-    job_id: UUID, image_url: str,
+    job_id: UUID,
+    image_url: str,
 ) -> int | None:
     """Returns the count if we should yield, or None if we orphaned."""
     try:

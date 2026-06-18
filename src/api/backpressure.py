@@ -4,6 +4,7 @@ Soft warn at BACKPRESSURE_QUEUE_WARN; hard reject (HTTP 429) at
 BACKPRESSURE_QUEUE_REJECT. Implemented in M7 — minimal stub here so
 api.routes.submit_receipt can import.
 """
+
 from __future__ import annotations
 
 import logging

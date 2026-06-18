@@ -4,6 +4,7 @@ Revision ID: 0002_cdn_url_migration
 Revises: 0001_initial_jobs
 Create Date: 2026-06-04
 """
+
 from alembic import op
 
 revision = "0002_cdn_url_migration"

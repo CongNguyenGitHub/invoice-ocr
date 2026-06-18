@@ -1,4 +1,5 @@
 """M5 — light surface tests. Full lifecycle verified in integration (M5 gate)."""
+
 from __future__ import annotations
 
 import pytest
@@ -50,4 +51,3 @@ def test_token_bucket_acquires_and_denies() -> None:
         assert await b.acquire() is False
 
     asyncio.run(_run())
-

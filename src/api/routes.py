@@ -14,6 +14,7 @@ Contract:
   * /healthz — static 200
   * /readyz  — aggregates redis + pg + triton probes
 """
+
 from __future__ import annotations
 
 import logging
@@ -46,13 +47,8 @@ def _validate_image_domain(url: str) -> None:
     """Raise ValueError if the URL domain is not in the allowlist."""
     parsed = urlparse(url)
     hostname = parsed.hostname or ""
-    if not any(
-        hostname == domain or hostname.endswith(f".{domain}")
-        for domain in settings.ALLOWED_IMAGE_DOMAINS
-    ):
-        raise ValueError(
-            f"Domain {hostname!r} not in allowlist: {settings.ALLOWED_IMAGE_DOMAINS}"
-        )
+    if not any(hostname == domain or hostname.endswith(f".{domain}") for domain in settings.ALLOWED_IMAGE_DOMAINS):
+        raise ValueError(f"Domain {hostname!r} not in allowlist: {settings.ALLOWED_IMAGE_DOMAINS}")
 
 
 def _pending(job_id: UUID, status_val: str, msg: str) -> dict:
@@ -113,8 +109,10 @@ def _error_response(job_id: UUID, http_status: int, code: str, msg: str) -> JSON
     # Map HTTP → payload status for the envelope
     payload_status = "FAILED_PERMANENT" if http_status in (400, 413, 415, 422) else "FAILED_TRANSIENT"
     payload = {
-        "job_id": str(job_id), "status": payload_status,
-        "error_code": code, "error_message": msg,
+        "job_id": str(job_id),
+        "status": payload_status,
+        "error_code": code,
+        "error_message": msg,
     }
     return JSONResponse(payload, status_code=http_status)
 
@@ -137,13 +135,10 @@ async def get_receipt(job_id: UUID) -> JSONResponse:
         env = _pending(job_id, s.value, "still in flight")
         return JSONResponse(env, status_code=202)
     if s == JobStatus.FAILED_PERMANENT:
-        return _error_response(job_id, 422, record.error_code or "failed_permanent",
-                               record.error_message or "")
+        return _error_response(job_id, 422, record.error_code or "failed_permanent", record.error_message or "")
     if s == JobStatus.FAILED_TRANSIENT:
-        return _error_response(job_id, 503, record.error_code or "failed_transient",
-                               record.error_message or "")
-    raise HTTPException(status_code=500, detail={"error_code": "bad_status",
-                                                  "status": s.value})
+        return _error_response(job_id, 503, record.error_code or "failed_transient", record.error_message or "")
+    raise HTTPException(status_code=500, detail={"error_code": "bad_status", "status": s.value})
 
 
 # -------------------- health --------------------
@@ -159,13 +154,12 @@ async def readyz() -> JSONResponse:
     from src.pipeline.triton_client import is_ready as triton_ready
 
     results = await asyncio.gather(
-        redis.ping(), pg.ping(),
+        redis.ping(),
+        pg.ping(),
         triton_ready(),
         return_exceptions=True,
     )
-    redis_ok, pg_ok, triton_ok = [
-        (r is True) for r in results
-    ]
+    redis_ok, pg_ok, triton_ok = [(r is True) for r in results]
     ready = all([redis_ok, pg_ok, triton_ok])
     body = {
         "ready": ready,

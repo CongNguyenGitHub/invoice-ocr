@@ -3,6 +3,7 @@
 Note: alembic itself uses sync SQLAlchemy, so we swap the asyncpg driver name
 for psycopg2 when constructing the URL.
 """
+
 from __future__ import annotations
 
 from logging.config import fileConfig

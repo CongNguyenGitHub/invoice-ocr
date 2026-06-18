@@ -9,6 +9,7 @@ Given a preprocessed PIL image:
   4. Reverse letterbox → image coords, expand by YOLO_CROP_PAD_PERCENT, clamp,
      return cropped PIL.
 """
+
 from __future__ import annotations
 
 import logging
@@ -49,9 +50,7 @@ async def detect_invoice(img: Image.Image) -> Image.Image:
 
     out = await infer_yolo(batch)  # (1, 5, anchors)
     if out.ndim != 3 or out.shape[1] != 5:
-        raise PermanentPipelineError(
-            "yolo_bad_output_shape", f"unexpected YOLO output shape: {out.shape}"
-        )
+        raise PermanentPipelineError("yolo_bad_output_shape", f"unexpected YOLO output shape: {out.shape}")
     preds = out[0]  # (5, anchors)
     conf = preds[4]
     best = int(np.argmax(conf))

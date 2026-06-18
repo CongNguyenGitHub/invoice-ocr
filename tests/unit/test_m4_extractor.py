@@ -1,4 +1,5 @@
 """M4 — extractor unit tests (google-genai mocked)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -101,9 +102,9 @@ async def test_extractor_returns_validated_invoice(monkeypatch) -> None:
     _reset_extractor_singletons()
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "fake-key", raising=False)
 
-    response = MagicMock(text=_valid_invoice_json(), usage_metadata=MagicMock(
-        prompt_token_count=10, candidates_token_count=20
-    ))
+    response = MagicMock(
+        text=_valid_invoice_json(), usage_metadata=MagicMock(prompt_token_count=10, candidates_token_count=20)
+    )
     gen = AsyncMock(return_value=response)
     _install_fake_genai(monkeypatch, gen)
 

@@ -24,6 +24,7 @@ Usage
     python scripts/split_eval_set.py --input label_verified.json --out-dir data/eval
     python scripts/split_eval_set.py --test-ratio 0.30 --seed 42
 """
+
 from __future__ import annotations
 
 import argparse
@@ -49,13 +50,11 @@ def _is_missing_critical(inv: dict) -> bool:
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--input",      default="label_verified.json")
-    ap.add_argument("--out-dir",    default="data/eval")
-    ap.add_argument("--test-ratio", type=float, default=0.30,
-                    help="Fraction for test set (default 0.30 -> 30%%)")
-    ap.add_argument("--seed",       type=int, default=42)
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--input", default="label_verified.json")
+    ap.add_argument("--out-dir", default="data/eval")
+    ap.add_argument("--test-ratio", type=float, default=0.30, help="Fraction for test set (default 0.30 -> 30%%)")
+    ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
@@ -89,7 +88,7 @@ def main() -> int:
 
     rng = random.Random(args.seed)
 
-    dev_items:  list[tuple[int, dict]] = []
+    dev_items: list[tuple[int, dict]] = []
     test_items: list[tuple[int, dict]] = []
 
     print(f"\nStratified split  (test_ratio={args.test_ratio}, seed={args.seed}):")
@@ -104,7 +103,7 @@ def main() -> int:
             n_test = max(2, math.floor(n_total * args.test_ratio))
         else:
             n_test = math.floor(n_total * args.test_ratio)
-        n_dev  = n_total - n_test
+        n_dev = n_total - n_test
 
         dev_items.extend(items[:n_dev])
         test_items.extend(items[n_dev:])
@@ -114,7 +113,7 @@ def main() -> int:
     print(f"  {'TOTAL':13s}  {len(usable):6d}  {len(dev_items):6d}  {len(test_items):6d}")
 
     # Sanity check: no overlap
-    dev_indices  = {i for i, _ in dev_items}
+    dev_indices = {i for i, _ in dev_items}
     test_indices = {i for i, _ in test_items}
     assert dev_indices.isdisjoint(test_indices), "BUG: dev/test overlap!"
 
@@ -129,38 +128,45 @@ def main() -> int:
     def _records(items: list[tuple[int, dict]]) -> list[dict]:
         return [rec for _, rec in items]
 
-    dev_path  = out_dir / "dev_set.json"
+    dev_path = out_dir / "dev_set.json"
     test_path = out_dir / "test_set.json"
-    dev_path.write_text(
-        json.dumps(_records(dev_items), ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    test_path.write_text(
-        json.dumps(_records(test_items), ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    dev_path.write_text(json.dumps(_records(dev_items), ensure_ascii=False, indent=2), encoding="utf-8")
+    test_path.write_text(json.dumps(_records(test_items), ensure_ascii=False, indent=2), encoding="utf-8")
 
     # Write CSV meta
     csv_path = out_dir / "split_meta.csv"
     with csv_path.open("w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            "golden_index", "type", "split", "file_url", "verify_status",
-        ])
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "golden_index",
+                "type",
+                "split",
+                "file_url",
+                "verify_status",
+            ],
+        )
         writer.writeheader()
         for orig_idx, rec in dev_items:
-            writer.writerow({
-                "golden_index":  orig_idx,
-                "type":          rec.get("type", ""),
-                "split":         "dev",
-                "file_url":      rec.get("file", ""),
-                "verify_status": rec.get("_verify_status", ""),
-            })
+            writer.writerow(
+                {
+                    "golden_index": orig_idx,
+                    "type": rec.get("type", ""),
+                    "split": "dev",
+                    "file_url": rec.get("file", ""),
+                    "verify_status": rec.get("_verify_status", ""),
+                }
+            )
         for orig_idx, rec in test_items:
-            writer.writerow({
-                "golden_index":  orig_idx,
-                "type":          rec.get("type", ""),
-                "split":         "test",
-                "file_url":      rec.get("file", ""),
-                "verify_status": rec.get("_verify_status", ""),
-            })
+            writer.writerow(
+                {
+                    "golden_index": orig_idx,
+                    "type": rec.get("type", ""),
+                    "split": "test",
+                    "file_url": rec.get("file", ""),
+                    "verify_status": rec.get("_verify_status", ""),
+                }
+            )
 
     print("\nOutputs:")
     print(f"  {dev_path}   ({len(dev_items)} records)")

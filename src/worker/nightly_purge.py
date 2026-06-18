@@ -4,6 +4,7 @@ Runs on exactly ONE worker (settings.PURGE_WORKER_ID == settings.WORKER_ID)
 at local 02:00. This avoids the DELETE storm of N workers running it
 simultaneously.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -26,15 +27,15 @@ def _seconds_until_next_0200() -> float:
 
 async def nightly_purge_loop(shutdown: asyncio.Event) -> None:
     if settings.WORKER_ID != settings.PURGE_WORKER_ID:
-        logger.info("nightly_purge_skipped_non_leader",
-                    extra={"worker_id": settings.WORKER_ID,
-                           "purge_worker_id": settings.PURGE_WORKER_ID})
+        logger.info(
+            "nightly_purge_skipped_non_leader",
+            extra={"worker_id": settings.WORKER_ID, "purge_worker_id": settings.PURGE_WORKER_ID},
+        )
         # Idle daemon: just sit on shutdown
         await shutdown.wait()
         return
 
-    logger.info("nightly_purge_started",
-                extra={"retention_days": settings.JOB_RETENTION_DAYS})
+    logger.info("nightly_purge_started", extra={"retention_days": settings.JOB_RETENTION_DAYS})
     while not shutdown.is_set():
         wait_s = _seconds_until_next_0200()
         try:

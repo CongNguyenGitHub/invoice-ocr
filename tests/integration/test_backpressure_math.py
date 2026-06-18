@@ -10,6 +10,7 @@ Catches regressions in:
   * TokenBucket burst clamping (max tokens never exceeds capacity)
   * Lock-free acquire returning False instead of blocking
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -25,34 +26,32 @@ from src.utils.token_bucket import TokenBucket
 
 def test_backpressure_thresholds_are_sane() -> None:
     """REJECT must be > WARN must be > 0; both must be ints."""
-    warn   = settings.BACKPRESSURE_QUEUE_WARN
+    warn = settings.BACKPRESSURE_QUEUE_WARN
     reject = settings.BACKPRESSURE_QUEUE_REJECT
-    assert isinstance(warn,   int) and warn   > 0
-    assert isinstance(reject, int) and reject > warn, (
-        f"REJECT ({reject}) must be > WARN ({warn})"
-    )
+    assert isinstance(warn, int) and warn > 0
+    assert isinstance(reject, int) and reject > warn, f"REJECT ({reject}) must be > WARN ({warn})"
 
 
 @pytest.mark.parametrize(
     "depth, want_429, want_warn",
     [
-        (0,                                 False, False),
-        (199,                               False, False),
-        (200,                               False, True),    # exactly at WARN
+        (0, False, False),
+        (199, False, False),
+        (200, False, True),  # exactly at WARN
         (settings.BACKPRESSURE_QUEUE_REJECT - 1, False, True),
-        (settings.BACKPRESSURE_QUEUE_REJECT,     True,  True),  # exactly at REJECT
-        (settings.BACKPRESSURE_QUEUE_REJECT + 1, True,  True),
+        (settings.BACKPRESSURE_QUEUE_REJECT, True, True),  # exactly at REJECT
+        (settings.BACKPRESSURE_QUEUE_REJECT + 1, True, True),
     ],
 )
 def test_backpressure_decision_matrix(depth: int, want_429: bool, want_warn: bool) -> None:
     """The thresholds in settings.py must match the decision the API code makes:
-       depth >= REJECT  -> 429
-       depth >= WARN    -> warn (no 429)
+    depth >= REJECT  -> 429
+    depth >= WARN    -> warn (no 429)
     """
     is_reject = depth >= settings.BACKPRESSURE_QUEUE_REJECT
-    is_warn   = depth >= settings.BACKPRESSURE_QUEUE_WARN
-    assert is_reject == want_429,  f"REJECT decision wrong at depth={depth}"
-    assert is_warn   == want_warn, f"WARN decision wrong at depth={depth}"
+    is_warn = depth >= settings.BACKPRESSURE_QUEUE_WARN
+    assert is_reject == want_429, f"REJECT decision wrong at depth={depth}"
+    assert is_warn == want_warn, f"WARN decision wrong at depth={depth}"
 
 
 # ──────────────────────────── Token bucket math ─────────────────────────────
@@ -89,7 +88,7 @@ async def test_token_bucket_refills_at_configured_rate() -> None:
 async def test_token_bucket_does_not_overflow_capacity() -> None:
     """After a long idle, available tokens must clamp to burst, not exceed it."""
     bucket = TokenBucket(rate_per_second=100.0, burst=4)
-    await asyncio.sleep(0.1)              # 10 tokens of refill if uncapped
+    await asyncio.sleep(0.1)  # 10 tokens of refill if uncapped
     granted = sum([await bucket.acquire() for _ in range(8)])
     assert granted == 4, f"expected exactly burst=4 grants, got {granted}"
 

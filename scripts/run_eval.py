@@ -50,6 +50,7 @@ Usage
     # Quick 20-sample smoke
     python scripts/run_eval.py --input data/eval/dev_set.json --sample 20
 """
+
 from __future__ import annotations
 
 import argparse
@@ -66,13 +67,11 @@ from pathlib import Path
 
 import httpx
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s %(levelname)s %(message)s",
-                    datefmt="%H:%M:%S")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
 log = logging.getLogger(__name__)
 
-POLL_INTERVAL  = 2.0   # s between polls
-POLL_MAX_WAIT  = 120.0 # s max poll time per job
+POLL_INTERVAL = 2.0  # s between polls
+POLL_MAX_WAIT = 120.0  # s max poll time per job
 
 
 # ── Field comparison helpers (inlined — no src.* deps) ───────────────────────
@@ -84,8 +83,8 @@ import re
 def _normalize_money_for_compare(value: str) -> str:
     if not value:
         return ""
-    v = re.sub(r'[^\d]', '', str(value))
-    return v.lstrip('0') or '0'
+    v = re.sub(r"[^\d]", "", str(value))
+    return v.lstrip("0") or "0"
 
 
 def _normalize_quantity(q: str) -> str:
@@ -93,10 +92,10 @@ def _normalize_quantity(q: str) -> str:
     if not q:
         return ""
     q = str(q).strip().lower()
-    q = re.sub(r'[^\d.,]', '', q)
-    q = q.replace(',', '.')
+    q = re.sub(r"[^\d.,]", "", q)
+    q = q.replace(",", ".")
     try:
-        return str(float(q)).rstrip('0').rstrip('.')
+        return str(float(q)).rstrip("0").rstrip(".")
     except ValueError:
         return q
 
@@ -104,24 +103,26 @@ def _normalize_quantity(q: str) -> str:
 def _normalize_label_record(record: dict) -> dict:
     products = []
     for p in record.get("products", []):
-        products.append({
-            "product_id":          p.get("product_id", p.get("product_code", "")),
-            "product_name":        p.get("product_name", ""),
-            "product_unit_price":  p.get("product_unit_price", ""),
-            "product_quantity":    p.get("product_quantity", p.get("product_amount", "")),
-            "product_total_money": p.get("product_total_money", ""),
-        })
+        products.append(
+            {
+                "product_id": p.get("product_id", p.get("product_code", "")),
+                "product_name": p.get("product_name", ""),
+                "product_unit_price": p.get("product_unit_price", ""),
+                "product_quantity": p.get("product_quantity", p.get("product_amount", "")),
+                "product_total_money": p.get("product_total_money", ""),
+            }
+        )
     return {
-        "name":           record.get("name", ""),
-        "type":           record.get("type", ""),
-        "date":           record.get("date", ""),
-        "time":           record.get("time", ""),
-        "pos_id":         record.get("pos_id", ""),
+        "name": record.get("name", ""),
+        "type": record.get("type", ""),
+        "date": record.get("date", ""),
+        "time": record.get("time", ""),
+        "pos_id": record.get("pos_id", ""),
         "receipt_number": record.get("receipt_number", ""),
-        "cashier":        record.get("cashier", ""),
-        "total_money":    record.get("total_money", ""),
-        "barcode":        record.get("barcode", ""),
-        "products":       products,
+        "cashier": record.get("cashier", ""),
+        "total_money": record.get("total_money", ""),
+        "barcode": record.get("barcode", ""),
+        "products": products,
     }
 
 
@@ -131,11 +132,11 @@ def compare_field(pred: str, gt: str, field_name: str) -> bool | None:
     if not pred:
         return False
     pred = str(pred).strip().lower()
-    gt   = str(gt).strip().lower()
+    gt = str(gt).strip().lower()
     if field_name in ("total_money", "product_unit_price", "product_total_money"):
         return _normalize_money_for_compare(pred) == _normalize_money_for_compare(gt)
     if field_name == "barcode":
-        return pred.replace('*', '') == gt.replace('*', '')
+        return pred.replace("*", "") == gt.replace("*", "")
     if field_name == "product_quantity":
         return _normalize_quantity(pred) == _normalize_quantity(gt)
     if field_name == "product_name":
@@ -147,18 +148,17 @@ def evaluate_single(pred: dict, gt: dict) -> tuple[dict[str, list[bool]], list[d
     results: dict[str, list[bool]] = {}
     mismatches: list[dict] = []
 
-    base_fields = ["name", "type", "date", "time", "pos_id",
-                   "receipt_number", "cashier", "total_money", "barcode"]
+    base_fields = ["name", "type", "date", "time", "pos_id", "receipt_number", "cashier", "total_money", "barcode"]
     for fn in base_fields:
         val = compare_field(pred.get(fn, ""), gt.get(fn, ""), fn)
         if val is not None:
             results.setdefault(fn, []).append(val)
             if not val:
-                mismatches.append({"field": fn,
-                                   "expected":  str(gt.get(fn, "")).strip(),
-                                   "predicted": str(pred.get(fn, "")).strip()})
+                mismatches.append(
+                    {"field": fn, "expected": str(gt.get(fn, "")).strip(), "predicted": str(pred.get(fn, "")).strip()}
+                )
 
-    gt_products   = gt.get("products", [])
+    gt_products = gt.get("products", [])
     raw_pred_prods = pred.get("products", [])
 
     # Greedy alignment
@@ -167,15 +167,18 @@ def evaluate_single(pred: dict, gt: dict) -> tuple[dict[str, list[bool]], list[d
     for gt_p in gt_products:
         gt_price = _normalize_money_for_compare(gt_p.get("product_unit_price", ""))
         gt_total = _normalize_money_for_compare(gt_p.get("product_total_money", ""))
-        gt_name  = str(gt_p.get("product_name", "")).strip().lower()
+        gt_name = str(gt_p.get("product_name", "")).strip().lower()
         best_idx, best_score = -1, -1
         for pi, pp in enumerate(raw_pred_prods):
             if pi in used:
                 continue
             score = 0
-            if gt_price and _normalize_money_for_compare(pp.get("product_unit_price","")) == gt_price: score += 2
-            if gt_total and _normalize_money_for_compare(pp.get("product_total_money","")) == gt_total: score += 2
-            if gt_name  and str(pp.get("product_name","")).strip().lower() == gt_name: score += 3
+            if gt_price and _normalize_money_for_compare(pp.get("product_unit_price", "")) == gt_price:
+                score += 2
+            if gt_total and _normalize_money_for_compare(pp.get("product_total_money", "")) == gt_total:
+                score += 2
+            if gt_name and str(pp.get("product_name", "")).strip().lower() == gt_name:
+                score += 3
             if score > best_score:
                 best_score, best_idx = score, pi
         if best_idx != -1 and best_score > 0:
@@ -187,23 +190,27 @@ def evaluate_single(pred: dict, gt: dict) -> tuple[dict[str, list[bool]], list[d
         if pi not in used:
             aligned_pred.append(pp)
 
-    product_fields = ["product_id", "product_name", "product_unit_price",
-                      "product_quantity", "product_total_money"]
+    product_fields = ["product_id", "product_name", "product_unit_price", "product_quantity", "product_total_money"]
     for i in range(max(len(gt_products), len(aligned_pred))):
-        gt_p   = gt_products[i]   if i < len(gt_products)   else {}
-        pred_p = aligned_pred[i]  if i < len(aligned_pred)  else {}
+        gt_p = gt_products[i] if i < len(gt_products) else {}
+        pred_p = aligned_pred[i] if i < len(aligned_pred) else {}
         for fn in product_fields:
             val = compare_field(pred_p.get(fn, ""), gt_p.get(fn, ""), fn)
             if val is not None:
                 results.setdefault(fn, []).append(val)
                 if not val:
-                    mismatches.append({"field":     f"product[{i}].{fn}",
-                                       "expected":  str(gt_p.get(fn,"")).strip(),
-                                       "predicted": str(pred_p.get(fn,"")).strip()})
+                    mismatches.append(
+                        {
+                            "field": f"product[{i}].{fn}",
+                            "expected": str(gt_p.get(fn, "")).strip(),
+                            "predicted": str(pred_p.get(fn, "")).strip(),
+                        }
+                    )
     return results, mismatches
 
 
 # ─── Image download (with local cache) ───────────────────────────────────────
+
 
 def _download(url: str, cache_dir: Path) -> bytes | None:
     filename = url.split("/")[-1]
@@ -223,6 +230,7 @@ def _download(url: str, cache_dir: Path) -> bytes | None:
 
 # ─── Single record evaluation ────────────────────────────────────────────────
 
+
 def _eval_one(
     record: dict,
     api_base: str,
@@ -230,12 +238,17 @@ def _eval_one(
     client: httpx.Client,
 ) -> dict:
     url = record.get("file", "")
-    t0  = time.perf_counter()
+    t0 = time.perf_counter()
 
     img = _download(url, cache_dir)
     if img is None:
-        return {"orig_file": url, "type": record.get("type", ""),
-                "status": "download_failed", "latency_s": 0.0, "mismatches": []}
+        return {
+            "orig_file": url,
+            "type": record.get("type", ""),
+            "status": "download_failed",
+            "latency_s": 0.0,
+            "mismatches": [],
+        }
 
     # Submit
     try:
@@ -245,9 +258,14 @@ def _eval_one(
             timeout=90.0,
         )
     except Exception as exc:
-        return {"orig_file": url, "type": record.get("type", ""),
-                "status": "api_error", "error": str(exc),
-                "latency_s": time.perf_counter() - t0, "mismatches": []}
+        return {
+            "orig_file": url,
+            "type": record.get("type", ""),
+            "status": "api_error",
+            "error": str(exc),
+            "latency_s": time.perf_counter() - t0,
+            "mismatches": [],
+        }
 
     http_code = resp.status_code
 
@@ -261,9 +279,13 @@ def _eval_one(
         body = resp.json()
         job_id = body.get("job_id")
         if not job_id:
-            return {"orig_file": url, "type": record.get("type", ""),
-                    "status": "no_job_id", "latency_s": time.perf_counter() - t0,
-                    "mismatches": []}
+            return {
+                "orig_file": url,
+                "type": record.get("type", ""),
+                "status": "no_job_id",
+                "latency_s": time.perf_counter() - t0,
+                "mismatches": [],
+            }
         deadline = time.perf_counter() + POLL_MAX_WAIT
         pred_invoice = None
         while time.perf_counter() < deadline:
@@ -277,24 +299,40 @@ def _eval_one(
                 pred_invoice = poll.json()
                 break
             elif pcode in (422, 503):
-                return {"orig_file": url, "type": record.get("type", ""),
-                        "status": "pipeline_failed",
-                        "error_code": poll.json().get("error_code", ""),
-                        "latency_s": time.perf_counter() - t0, "mismatches": []}
+                return {
+                    "orig_file": url,
+                    "type": record.get("type", ""),
+                    "status": "pipeline_failed",
+                    "error_code": poll.json().get("error_code", ""),
+                    "latency_s": time.perf_counter() - t0,
+                    "mismatches": [],
+                }
             # 202 -> still pending, keep polling
         if pred_invoice is None:
-            return {"orig_file": url, "type": record.get("type", ""),
-                    "status": "poll_timeout", "latency_s": time.perf_counter() - t0,
-                    "mismatches": []}
+            return {
+                "orig_file": url,
+                "type": record.get("type", ""),
+                "status": "poll_timeout",
+                "latency_s": time.perf_counter() - t0,
+                "mismatches": [],
+            }
 
     elif http_code == 429:
-        return {"orig_file": url, "type": record.get("type", ""),
-                "status": "backpressure_429", "latency_s": time.perf_counter() - t0,
-                "mismatches": []}
+        return {
+            "orig_file": url,
+            "type": record.get("type", ""),
+            "status": "backpressure_429",
+            "latency_s": time.perf_counter() - t0,
+            "mismatches": [],
+        }
     else:
-        return {"orig_file": url, "type": record.get("type", ""),
-                "status": f"http_{http_code}", "latency_s": time.perf_counter() - t0,
-                "mismatches": []}
+        return {
+            "orig_file": url,
+            "type": record.get("type", ""),
+            "status": f"http_{http_code}",
+            "latency_s": time.perf_counter() - t0,
+            "mismatches": [],
+        }
 
     latency = time.perf_counter() - t0
 
@@ -303,38 +341,39 @@ def _eval_one(
     _, mismatches = evaluate_single(pred_invoice, gt)
 
     return {
-        "orig_file":  url,
-        "type":       record.get("type", ""),
-        "status":     "ok",
-        "latency_s":  round(latency, 2),
+        "orig_file": url,
+        "type": record.get("type", ""),
+        "status": "ok",
+        "latency_s": round(latency, 2),
         "mismatches": mismatches,
     }
 
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 
+
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--input",     required=True,
-                    help="Split JSON file (dev_set.json or test_set.json)")
-    ap.add_argument("--api",       default="http://localhost:8000")
-    ap.add_argument("--psv",       default=os.environ.get("PROMPT_SEMANTIC_VERSION", "v3.5"),
-                    help="Prompt semantic version label (used in report filename)")
-    ap.add_argument("--split",     default=None,
-                    help="Split label for report (auto-detected from filename if omitted)")
-    ap.add_argument("--workers",   type=int, default=4,
-                    help="Concurrent HTTP workers (default 4)")
-    ap.add_argument("--sample",    type=int, default=0,
-                    help="Evaluate only N random records (0 = all). Alias of --max-records.")
-    ap.add_argument("--max-records", type=int, default=0,
-                    help="CI-friendly alias for --sample. If both set, --max-records wins.")
-    ap.add_argument("--seed",      type=int, default=42)
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--input", required=True, help="Split JSON file (dev_set.json or test_set.json)")
+    ap.add_argument("--api", default="http://localhost:8000")
+    ap.add_argument(
+        "--psv",
+        default=os.environ.get("PROMPT_SEMANTIC_VERSION", "v3.5"),
+        help="Prompt semantic version label (used in report filename)",
+    )
+    ap.add_argument("--split", default=None, help="Split label for report (auto-detected from filename if omitted)")
+    ap.add_argument("--workers", type=int, default=4, help="Concurrent HTTP workers (default 4)")
+    ap.add_argument(
+        "--sample", type=int, default=0, help="Evaluate only N random records (0 = all). Alias of --max-records."
+    )
+    ap.add_argument(
+        "--max-records", type=int, default=0, help="CI-friendly alias for --sample. If both set, --max-records wins."
+    )
+    ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--cache-dir", default="data/eval_images")
-    ap.add_argument("--out",       default="eval_reports/",
-                    help="Directory for output report JSON")
+    ap.add_argument("--out", default="eval_reports/", help="Directory for output report JSON")
     args = ap.parse_args()
 
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
@@ -347,10 +386,7 @@ def main() -> int:
     records: list[dict] = json.loads(src.read_text(encoding="utf-8"))
 
     # Auto-detect split name from filename
-    split_label = args.split or (
-        "dev"  if "dev"  in src.stem else
-        "test" if "test" in src.stem else src.stem
-    )
+    split_label = args.split or ("dev" if "dev" in src.stem else "test" if "test" in src.stem else src.stem)
 
     # --max-records takes precedence over --sample if both supplied
     n_cap = args.max_records if args.max_records > 0 else args.sample
@@ -362,17 +398,20 @@ def main() -> int:
     cache_dir = Path(args.cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    log.info("Evaluating %d records | api=%s | workers=%d | psv=%s | split=%s",
-             len(records), args.api, args.workers, args.psv, split_label)
+    log.info(
+        "Evaluating %d records | api=%s | workers=%d | psv=%s | split=%s",
+        len(records),
+        args.api,
+        args.workers,
+        args.psv,
+        split_label,
+    )
 
     per_record_results: list[dict] = [None] * len(records)  # type: ignore[list-item]
 
     with httpx.Client(timeout=120.0) as client:
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
-            futures = {
-                pool.submit(_eval_one, rec, args.api, cache_dir, client): i
-                for i, rec in enumerate(records)
-            }
+            futures = {pool.submit(_eval_one, rec, args.api, cache_dir, client): i for i, rec in enumerate(records)}
             for fut in as_completed(futures):
                 i = futures[fut]
                 try:
@@ -380,9 +419,9 @@ def main() -> int:
                 except Exception as exc:
                     per_record_results[i] = {
                         "orig_file": records[i].get("file", ""),
-                        "type":      records[i].get("type", ""),
-                        "status":    "exception",
-                        "error":     str(exc),
+                        "type": records[i].get("type", ""),
+                        "status": "exception",
+                        "error": str(exc),
                         "latency_s": 0.0,
                         "mismatches": [],
                     }
@@ -394,16 +433,14 @@ def main() -> int:
     from collections import defaultdict
 
     n_success = sum(1 for r in per_record_results if r["status"] == "ok")
-    n_failed  = len(per_record_results) - n_success
+    n_failed = len(per_record_results) - n_success
     latencies = [r["latency_s"] for r in per_record_results if r["status"] == "ok"]
-    avg_lat   = sum(latencies) / len(latencies) if latencies else 0.0
+    avg_lat = sum(latencies) / len(latencies) if latencies else 0.0
 
     # Field accuracy (global)
     field_counts: dict[str, dict] = defaultdict(lambda: {"correct": 0, "total": 0})
     # Per-type field accuracy
-    type_field_counts: dict[str, dict[str, dict]] = defaultdict(
-        lambda: defaultdict(lambda: {"correct": 0, "total": 0})
-    )
+    type_field_counts: dict[str, dict[str, dict]] = defaultdict(lambda: defaultdict(lambda: {"correct": 0, "total": 0}))
     type_n: dict[str, int] = defaultdict(int)
 
     for rec_result, record in zip(per_record_results, records):
@@ -434,8 +471,7 @@ def main() -> int:
         return round(d["correct"] / d["total"] * 100, 1) if d["total"] else 0.0
 
     field_accuracy = {
-        k: {"correct": v["correct"], "total": v["total"], "pct": _pct(v)}
-        for k, v in sorted(field_counts.items())
+        k: {"correct": v["correct"], "total": v["total"], "pct": _pct(v)} for k, v in sorted(field_counts.items())
     }
     by_type = {
         t: {
@@ -443,39 +479,34 @@ def main() -> int:
             "field_accuracy": {
                 k: {"correct": v["correct"], "total": v["total"], "pct": _pct(v)}
                 for k, v in sorted(type_field_counts[t].items())
-            }
+            },
         }
         for t in sorted(type_n)
     }
 
-    overall_avg = (
-        sum(v["pct"] for v in field_accuracy.values()) / len(field_accuracy)
-        if field_accuracy else 0.0
-    )
+    overall_avg = sum(v["pct"] for v in field_accuracy.values()) / len(field_accuracy) if field_accuracy else 0.0
 
     report = {
-        "psv":             args.psv,
-        "split":           split_label,
-        "input":           str(src),
-        "api":             args.api,
-        "git_sha":         os.environ.get("GITHUB_SHA")
-                           or os.environ.get("GIT_SHA", "")
-                           or "",
-        "timestamp":       datetime.now().isoformat(timespec="seconds"),
-        "n_total":         len(records),
-        "n_success":       n_success,
-        "n_failed":        n_failed,
-        "avg_latency_s":   round(avg_lat, 2),
+        "psv": args.psv,
+        "split": split_label,
+        "input": str(src),
+        "api": args.api,
+        "git_sha": os.environ.get("GITHUB_SHA") or os.environ.get("GIT_SHA", "") or "",
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+        "n_total": len(records),
+        "n_success": n_success,
+        "n_failed": n_failed,
+        "avg_latency_s": round(avg_lat, 2),
         "overall_avg_pct": round(overall_avg, 1),
-        "field_accuracy":  field_accuracy,
-        "by_type":         by_type,
-        "per_record":      per_record_results,
+        "field_accuracy": field_accuracy,
+        "by_type": by_type,
+        "per_record": per_record_results,
     }
 
     # ── Print summary ──────────────────────────────────────────────────────
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"EVAL REPORT  psv={args.psv}  split={split_label}  n={len(records)}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Success: {n_success}  Failed: {n_failed}  Avg latency: {avg_lat:.2f}s")
     print(f"Overall avg accuracy: {overall_avg:.1f}%\n")
     print(f"{'Field':25s}  {'Correct':>8}  {'Total':>7}  {'%':>6}")
@@ -488,19 +519,19 @@ def main() -> int:
         tm = info["field_accuracy"].get("total_money", {})
         nm = info["field_accuracy"].get("name", {})
         pn = info["field_accuracy"].get("product_name", {})
-        print(f"  {t:15s}: n={info['n']:4d}  "
-              f"name={nm.get('pct',0):5.1f}%  "
-              f"total_money={tm.get('pct',0):5.1f}%  "
-              f"product_name={pn.get('pct',0):5.1f}%")
+        print(
+            f"  {t:15s}: n={info['n']:4d}  "
+            f"name={nm.get('pct', 0):5.1f}%  "
+            f"total_money={tm.get('pct', 0):5.1f}%  "
+            f"product_name={pn.get('pct', 0):5.1f}%"
+        )
 
     # ── Write report ───────────────────────────────────────────────────────
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_path = out_dir / f"eval_report_{args.psv}_{split_label}_{ts}.json"
-    out_path.write_text(
-        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\nReport saved -> {out_path}")
     return 0
 
@@ -514,6 +545,7 @@ def _build_pred_skeleton(mismatches: list[dict], gt: dict) -> dict:
     """
     import copy
     import re
+
     pred = copy.deepcopy(gt)
     for m in mismatches:
         field = m["field"]

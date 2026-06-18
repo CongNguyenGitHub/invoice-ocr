@@ -7,6 +7,7 @@ Steps (arch §5.1):
   4. Resize if max dim > MAX_IMAGE_DIMENSION (LANCZOS thumbnail)
   5. phash = imagehash.phash(img)
 """
+
 from __future__ import annotations
 
 import io

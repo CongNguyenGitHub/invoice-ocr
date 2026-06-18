@@ -1,4 +1,5 @@
 """Domain-level enums and Redis key format constants."""
+
 from __future__ import annotations
 
 from enum import Enum

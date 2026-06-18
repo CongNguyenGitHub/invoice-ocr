@@ -5,6 +5,7 @@ worker/rate_refresh daemon). `acquire()` is non-blocking: returns True if a
 token was consumed, False otherwise — caller's responsibility to raise
 RateLimitedLocallyError and yield.
 """
+
 from __future__ import annotations
 
 import asyncio

@@ -15,6 +15,7 @@ Fixture images:
   * Cached on first run under tests/fixtures/replay_images/
   * Skipped if the test set is missing or images are unreachable
 """
+
 from __future__ import annotations
 
 import json
@@ -25,11 +26,11 @@ import pytest
 
 from src.pipeline.preprocessor import preprocess_image
 
-REPO_ROOT     = Path(__file__).resolve().parents[2]
-TEST_SET      = REPO_ROOT / "data" / "eval" / "test_set.json"
-FIXTURES_DIR  = REPO_ROOT / "tests" / "fixtures" / "replay_images"
-N_IMAGES      = 6
-REPLAY_RUNS   = 3   # Re-run the same image this many times
+REPO_ROOT = Path(__file__).resolve().parents[2]
+TEST_SET = REPO_ROOT / "data" / "eval" / "test_set.json"
+FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures" / "replay_images"
+N_IMAGES = 6
+REPLAY_RUNS = 3  # Re-run the same image this many times
 
 
 @pytest.fixture(scope="module")

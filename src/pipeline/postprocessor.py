@@ -6,6 +6,7 @@ clean and makes unit tests trivial.
 Vietnamese normalizer logic ported verbatim from the legacy pipeline (the
 regexes are field-tested against real Aeon/BigC/Coopmart receipts).
 """
+
 from __future__ import annotations
 
 import logging

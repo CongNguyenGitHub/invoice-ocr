@@ -1,4 +1,5 @@
 """Schemas — all OCR output fields are strings. Missing -> "" (never None)."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -68,4 +69,3 @@ class JobRecord(BaseModel):
     error_message: str | None = None
     created_at: datetime
     updated_at: datetime
-

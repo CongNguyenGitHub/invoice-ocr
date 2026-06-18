@@ -3,6 +3,7 @@
 Exits non-zero on any failure so docker-compose's
 `depends_on: service_completed_successfully` gates api/worker correctly.
 """
+
 from __future__ import annotations
 
 import asyncio

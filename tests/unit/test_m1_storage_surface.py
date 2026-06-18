@@ -4,6 +4,7 @@ These don't touch real Redis/PG; they just verify the clients instantiate
 and expose the spec'd methods. Integration tests that connect live backends
 live under tests/integration/ and are gated on a docker-compose stack.
 """
+
 from __future__ import annotations
 
 import inspect
@@ -66,12 +67,7 @@ def test_alembic_migration_0001_imports() -> None:
     import importlib.util
     from pathlib import Path
 
-    path = (
-        Path(__file__).resolve().parents[2]
-        / "migrations"
-        / "versions"
-        / "0001_initial_jobs.py"
-    )
+    path = Path(__file__).resolve().parents[2] / "migrations" / "versions" / "0001_initial_jobs.py"
     assert path.exists()
     spec = importlib.util.spec_from_file_location("mig_0001", path)
     assert spec and spec.loader
@@ -87,12 +83,7 @@ def test_alembic_migration_0002_imports() -> None:
     import importlib.util
     from pathlib import Path
 
-    path = (
-        Path(__file__).resolve().parents[2]
-        / "migrations"
-        / "versions"
-        / "0002_cdn_url_migration.py"
-    )
+    path = Path(__file__).resolve().parents[2] / "migrations" / "versions" / "0002_cdn_url_migration.py"
     assert path.exists()
     spec = importlib.util.spec_from_file_location("mig_0002", path)
     assert spec and spec.loader
@@ -102,4 +93,3 @@ def test_alembic_migration_0002_imports() -> None:
     assert callable(mod.downgrade)
     assert mod.revision == "0002_cdn_url_migration"
     assert mod.down_revision == "0001_initial_jobs"
-

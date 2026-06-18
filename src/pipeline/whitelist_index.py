@@ -8,6 +8,7 @@ The index is built once at startup via `WhitelistIndex.build()` and stays
 frozen for the lifetime of the process. To update whitelists, redeploy
 the worker with new JSON files.
 """
+
 from __future__ import annotations
 
 import json
@@ -33,6 +34,7 @@ _KIND_CUTOFFS = {
 
 def _normalize(raw: str) -> str:
     import unicodedata
+
     return unicodedata.normalize("NFC", raw).strip()
 
 
@@ -122,9 +124,7 @@ class WhitelistIndex:
             whitelist_match_total.labels(field=kind, tier="miss").inc()
             return normalized
 
-        best = process.extractOne(
-            lower, [c[0] for c in candidates], scorer=fuzz.WRatio
-        )
+        best = process.extractOne(lower, [c[0] for c in candidates], scorer=fuzz.WRatio)
         if best and best[1] >= primary:
             tier = "exact" if best[1] == 100 else "fuzzy_high"
             whitelist_match_total.labels(field=kind, tier=tier).inc()

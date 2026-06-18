@@ -12,6 +12,7 @@ This catches:
 It is *not* an accuracy check — it does not call Gemini. It only verifies
 that whatever the LLM wrote, our schema can re-parse it.
 """
+
 from __future__ import annotations
 
 import json
@@ -22,9 +23,9 @@ from pydantic import ValidationError
 
 from src.schemas.invoice import InvoiceResult, Product
 
-REPO_ROOT  = Path(__file__).resolve().parents[2]
-RUNS_DIR   = REPO_ROOT / "experiments" / "runs"
-DEV_SET    = REPO_ROOT / "data" / "eval" / "dev_set.json"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+RUNS_DIR = REPO_ROOT / "experiments" / "runs"
+DEV_SET = REPO_ROOT / "data" / "eval" / "dev_set.json"
 SAMPLE_CAP = 50
 
 
@@ -44,12 +45,12 @@ def _normalize_product(p: dict) -> dict:
     already in scripts/run_eval.py:_normalize_label_record so the two stay in sync.
     """
     return {
-        "product_id":             p.get("product_id", p.get("product_code", "")),
-        "product_name":           p.get("product_name", ""),
-        "product_unit_price":     p.get("product_unit_price", ""),
-        "product_quantity":       p.get("product_quantity", p.get("product_amount", "")),
+        "product_id": p.get("product_id", p.get("product_code", "")),
+        "product_name": p.get("product_name", ""),
+        "product_unit_price": p.get("product_unit_price", ""),
+        "product_quantity": p.get("product_quantity", p.get("product_amount", "")),
         "product_discount_money": p.get("product_discount_money", ""),
-        "product_total_money":    p.get("product_total_money", ""),
+        "product_total_money": p.get("product_total_money", ""),
     }
 
 
@@ -73,7 +74,8 @@ def _rebuild_pred(gt: dict, mismatches: list[dict]) -> dict:
 
 @pytest.mark.parametrize("run_path", sorted(RUNS_DIR.glob("run_*.json")))
 def test_predictions_validate_against_invoice_schema(
-    run_path: Path, gold_records: dict[str, dict],
+    run_path: Path,
+    gold_records: dict[str, dict],
 ) -> None:
     """Every ok-status prediction in every historical run must satisfy InvoiceResult."""
     report = json.loads(run_path.read_text(encoding="utf-8"))
@@ -93,10 +95,7 @@ def test_predictions_validate_against_invoice_schema(
         except ValidationError as e:
             failures.append(f"{rec['orig_file']}: {e.errors()[:1]}")
 
-    assert not failures, (
-        f"{len(failures)} schema validation failures in {run_path.name}: "
-        + "\n  ".join(failures[:5])
-    )
+    assert not failures, f"{len(failures)} schema validation failures in {run_path.name}: " + "\n  ".join(failures[:5])
 
 
 def test_invoice_schema_round_trips_unchanged() -> None:
