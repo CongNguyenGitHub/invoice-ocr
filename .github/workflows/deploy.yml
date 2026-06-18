@@ -49,30 +49,12 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          SSH_SCAN_RETRIES=6
-          SSH_SCAN_TIMEOUT=10
-          SSH_SCAN_BACKOFF=5
-          touch ~/.ssh/known_hosts
-          for ((i=1; i<=SSH_SCAN_RETRIES; i++)); do
-            SCANNED_KEYS=$(ssh-keyscan -H -T "$SSH_SCAN_TIMEOUT" "$PRODUCTION_HOST" || true)
-            if [ -n "$SCANNED_KEYS" ]; then
-              printf '%s\n' "$SCANNED_KEYS" >> ~/.ssh/known_hosts
-              break
-            fi
-            echo "ssh-keyscan attempt $i/$SSH_SCAN_RETRIES failed, retrying in ${SSH_SCAN_BACKOFF}s..."
-            sleep "$SSH_SCAN_BACKOFF"
-          done
-          if ! ssh-keygen -F "$PRODUCTION_HOST" -f ~/.ssh/known_hosts > /dev/null; then
-            echo "Failed to verify SSH host key for $PRODUCTION_HOST after $SSH_SCAN_RETRIES attempts. Check DNS, network path, and firewall rules (TCP/22)."
-            exit 1
-          fi
+          ssh-keyscan -H "$PRODUCTION_HOST" >> ~/.ssh/known_hosts
 
           # Deploy via SSH
-          ssh -o StrictHostKeyChecking=yes -o ConnectTimeout=30 -i ~/.ssh/deploy_key ubuntu@$PRODUCTION_HOST << EOF
+          ssh -o StrictHostKeyChecking=yes -o ConnectTimeout=10 -i ~/.ssh/deploy_key ubuntu@$PRODUCTION_HOST << 'EOF'
             set -e
             echo "✓ SSH connection successful"
-            echo "Current directory: \$(pwd)"
-            echo "User: \$(whoami)"
 
             cd /opt/invoice-ocr
             echo "✓ Changed to /opt/invoice-ocr"
@@ -90,23 +72,23 @@ jobs:
             # Rolling restart
             docker compose up -d
 
-            # Wait for containers to start (10 minute grace period)
-            echo "Waiting 10 minutes for containers to fully initialize..."
-            sleep 600
+            # Wait for containers to start (30 seconds)
+            echo "Waiting 30 seconds for containers to start..."
+            sleep 30
 
-            # Health check with retries
+            # Health check with retries (2 minutes total)
             echo "Starting health checks..."
-            for i in {1..6}; do
+            for i in {1..12}; do
               if curl -sf http://localhost:8000/healthz > /dev/null 2>&1; then
-                echo "✓ Deployment successful (ready after $((600 + i*10)) seconds)"
+                echo "✓ Deployment successful (ready after $((30 + i*10)) seconds)"
                 exit 0
               fi
-              echo "Health check attempt $i/6..."
+              echo "Health check attempt $i/12..."
               sleep 10
             done
-            echo "✗ Health check failed after 11 minutes"
+            echo "✗ Health check failed after 2.5 minutes"
             docker compose ps
-            docker compose logs api --tail 20
+            docker compose logs api --tail 30
             exit 1
           EOF
 
