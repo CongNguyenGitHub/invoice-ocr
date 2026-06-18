@@ -69,17 +69,23 @@ jobs:
             # Rolling restart
             docker compose up -d
 
+            # Wait for containers to start (initial grace period)
+            echo "Waiting for containers to initialize..."
+            sleep 30
+
             # Health check with retries
-            echo "Waiting for services to start..."
-            for i in {1..12}; do
-              sleep 10
-              if curl -sf http://localhost:8000/healthz; then
-                echo "✓ Deployment successful (attempt $i)"
+            echo "Starting health checks..."
+            for i in {1..18}; do
+              if curl -sf http://localhost:8000/healthz > /dev/null 2>&1; then
+                echo "✓ Deployment successful (ready after $((30 + i*10)) seconds)"
                 exit 0
               fi
-              echo "Attempt $i failed, retrying..."
+              echo "Health check attempt $i/18..."
+              sleep 10
             done
-            echo "✗ Health check failed after 2 minutes"
+            echo "✗ Health check failed after 3.5 minutes"
+            docker compose ps
+            docker compose logs api --tail 20
             exit 1
           EOF
 
