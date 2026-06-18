@@ -8,6 +8,8 @@ Invoice OCR pipeline using Triton-batched YOLOv11n + Google Gemini Flash Lite fo
 
 **Performance**: ~3s p50 end-to-end, 10k/day steady state, 30k burst via horizontal scaling.
 
+**Deployment**: Single AWS EC2 t3.xlarge instance (4 vCPU, 16GB RAM, CPU-only, ~$143/month).
+
 ## Architecture Principles
 
 ### Fire-and-Forget Pattern
@@ -33,9 +35,11 @@ Invoice OCR pipeline using Triton-batched YOLOv11n + Google Gemini Flash Lite fo
   - `503` → `FAILED_TRANSIENT` (retry later)
   - `404` → job_id unknown
 
-### Triton Dynamic Batching
-- YOLOv11n runs on Triton Inference Server with dynamic batching (batch size 4–8)
+### Triton CPU Inference
+- YOLOv11n runs on Triton Inference Server in **CPU mode** (no GPU required)
+- Configured via `models/yolov11n_receipt/config.pbtxt` with `instance_group { kind: KIND_CPU }`
 - Worker sends gRPC requests; Triton queues and batches them automatically
+- Dynamic batching (batch size 4–8) for efficiency
 - See `src/pipeline/triton_client.py` and `src/pipeline/detector.py`
 
 ### Postprocessor Always Runs

@@ -66,6 +66,7 @@ services:
   # ───────────────── Triton ─────────────────
   triton:
     image: nvcr.io/nvidia/tritonserver:24.05-py3
+    ipc: shareable
     ports:
       - "8001:8001"
       - "8002:8002"
