@@ -175,8 +175,9 @@ jobs:
             cd /opt/invoice-ocr
             echo "✓ Changed to /opt/invoice-ocr"
 
-            # Pull latest code
-            git pull origin main
+            # Pull latest code (reset to match remote exactly)
+            git fetch origin main
+            git reset --hard origin/main
 
             # Set image tag
             export IMAGE=$ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
